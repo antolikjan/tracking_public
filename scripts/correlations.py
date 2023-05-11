@@ -301,7 +301,7 @@ def panel(data,categories,metadata,relationships,comparison_panel):
     ui['button4'].on_click(partial(add_to_blacklist,source=source,relationships=relationships))
 
 
-    ui['max_p'] =  Slider(start=0.0, end=1, value=0.01, step=0.01, title="maximum p-value",width=200)
+    ui['max_p'] =  Slider(start=0.0, end=0.2, value=0.01, step=0.01, title="maximum p-value",width=200)
     ui['max_p'].on_change('value',partial(set_table,source=source,relationships=relationships))
 
     ui['show_which'] = RadioButtonGroup(labels=['show all','show selected','pick'], active=0)

@@ -1,3 +1,4 @@
+from turtle import width
 from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, Panel, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
@@ -35,8 +36,8 @@ class ComparisonPanel(PairedAnalysis):
             p1.add_layout(LinearAxis(y_range_name="right"), 'right')
             self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
             self.plots['circles2'] = p1.circle(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
-            self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False)
-            self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False)   
+            self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False, width = 2)
+            self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
             p1.yaxis[0].major_label_text_color = "navy"
             p1.yaxis[1].major_label_text_color = "green"
             p1.yaxis[0].axis_label = "Steps"
