@@ -1,3 +1,4 @@
+from tkinter.tix import Tree
 import pandas as pd
 from scripts.airtable import airtable_download , convert_to_dataframe
 import numpy
@@ -26,6 +27,12 @@ def load_tables(table_names,api_key,base_id,cache=False):
             print('There are following duplicates in table ' + tn + " :" + str(t.index[t.index.duplicated()]))
 
         df = pd.concat(tables,axis=1,join='outer')
+        
+
+
+        # blt = convert_to_dataframe(airtable_download('BloodTest', api_key='keyBQivgbhrgIZQS9', base_id='appL3Wb1C7NvHTDl1'), index_column="Date", datatime_index=True)
+        # blt.sort_index(inplace=True)
+        # blt.drop(blt.index[:1], inplace=True)
 
         # check if no days are missing 
         for i in range(0,len(df.index)-1):
@@ -33,13 +40,15 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         # let's load up the metadata
         md = convert_to_dataframe(airtable_download('Metadata',api_key='keyCkIHRFu2ey2pnK',base_id='appIRvcTRGQflKWqD'),index_column="Name")
+        # md = convert_to_dataframe(airtable_download('Metadata',api_key=api_key,base_id=base_id),index_column="Name")
+
         md['Start of valid records'] = pd.to_datetime(md['Start of valid records'])
 
         # convert bool columns to float
         for col in df.columns:
             print(col)
             if md['Units'].loc[col] == 'bool':
-               df[col] = pd.to_numeric(df[col])
+                df[col] = pd.to_numeric(df[col])
 
         # convert enum columns to numbers
         for col in df.columns:
@@ -80,7 +89,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         #        df[col] = df[col].apply(hhmm_to_min)
 
-        # Somtimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
+        # Sometimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
         for col in df.columns:
             def nandict_to_nan(s):
                 if isinstance(s,dict):
@@ -103,10 +112,12 @@ def load_tables(table_names,api_key,base_id,cache=False):
         (df,md) = pickle.load(open('./locals/cache.pickle','br'))
         
     # let's populate categories 
-    #
     categories = {}
     for category in table_names:
         categories[category] = md.loc[md['Category'] == category].index.tolist()
+
+    
+    # print(f'printing the populated categories: {categories}')
 
     return df,md,categories
 
@@ -124,11 +135,13 @@ def load_PANAS_tables(api_key,base_id):
     
 
 def load_blood_tests(view_names,api_key,base_id,cache=False):
+
+    # print("NOW LOADING BLOOD TEST DATA")
     if not cache:
 
         blood_tests = {}
         for view in view_names:
-            blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=base_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)
+            blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=api_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)
         
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))

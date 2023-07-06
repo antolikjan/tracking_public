@@ -12,5 +12,9 @@ rm = RelationshipMetadata(metadata,initialize=False)
 
 curdoc().add_root(create_app(df,metadata,categories,rm))
 
-#blood_tests = load_blood_tests(['WBC Rest','WBC Differential','Immunity','Minerals','Kidney Function','Liver Function','Pancreas','Proteins','Glucose','Lipids','Thyroid','Hormones','Vitamins','Prostate','BiologicalAgeScores','Cardio'],cache=cache)
 
+# view_names = ['WBC Rest','WBC Differential','Immunity','Minerals','Kidney Function','Liver Function','Pancreas','Proteins','Glucose','Lipids','Thyroid','Hormones','Vitamins','Prostate','BiologicalAgeScores','Cardio']
+# blt = load_blood_tests(view_names, api_key='keyBQivgbhrgIZQS9', base_id='appL3Wb1C7NvHTDl1', cache=cache)
+# blood_tests = load_blood_tests(view_names, api_key='keyBQivgbhrgIZQS9', base_id='appL3Wb1C7NvHTDl1', cache=cache)
+
+#blood_tests = load_blood_tests(['WBC Rest','WBC Differential','Immunity','Minerals','Kidney Function','Liver Function','Pancreas','Proteins','Glucose','Lipids','Thyroid','Hormones','Vitamins','Prostate','BiologicalAgeScores','Cardio'],cache=cache)

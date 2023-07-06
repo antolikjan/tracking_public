@@ -267,7 +267,6 @@ def add_to_ignorelist(source,relationships):
 def panel(data,categories,metadata,relationships,comparison_panel):
 
     source = ColumnDataSource(data={'Variable 1' : [], 'Variable 2' : [], 'R' : [], 'p-value' : [], 'shift' : [], 'r_no_shift' : [], 'p_no_shift' : [], 'r_no_v1_to_v2' : [], 'p_no_v1_to_v2' : [], 'r_no_v2_to_v1' : [], 'p_no_v2_to_v1' : []})
-
     seletion_source = ColumnDataSource(data={'Var 1' : [], 'Var 2' : [], 'Var 3' : [], 'Var 4' : [],  'Var 5' : []})
 
     columns = [
