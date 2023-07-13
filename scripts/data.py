@@ -77,7 +77,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
         #                    assert False , "%s in column %s doesn't follow hh:mm format" % (s,col)
         #                 s = int(s.split(":")[0])*60+int(s.split(":")[1])
         #            return s
-
         #        df[col] = df[col].apply(hhmm_to_min)
 
         # Somtimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
@@ -90,7 +89,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
             df[col] = df[col].apply(nandict_to_nan)
     
 
-        # replace NaN with default values if they are specified, but only fter 'Start of valid records'
+        # replace NaN with default values if they are specified, but only after 'Start of valid records'
         for col in df.columns:
             if md['Units'].loc[col] != 'string':
                 df[col] = numpy.nan_to_num(df[col].to_numpy(float,na_value=numpy.nan),md['Default'].loc[col]) if not math.isnan(md['Default'].loc[col]) else df[col].to_numpy(float,na_value=numpy.nan)

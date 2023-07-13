@@ -1,7 +1,6 @@
 from functools import partial
 from bokeh.plotting import figure
-from bokeh.models.widgets import Panel
-from bokeh.models import ColumnDataSource, Row, Column, TableColumn, DataTable, Button
+from bokeh.models import Panel,ColumnDataSource, Row, Column, TableColumn, DataTable, Button
 from scripts.data import both_valid
 from datetime import datetime
 from datetime import date

@@ -1,4 +1,4 @@
-from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, Panel, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
+from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from scripts.data import cross_corr, both_valid, data_aquisition_overlap, data_aquisition_overlap_non_nans
@@ -30,7 +30,7 @@ class ComparisonPanel(PairedAnalysis):
             self.register_widget(Toggle(label="Show stats",button_type="success"),'show_stats_button',['active'])
 
             # FIGURE 1
-            p1 = figure(plot_width=300,plot_height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
+            p1 = figure(width=300,height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
             p1.extra_y_ranges = {"right" : Range1d(start=range2_start,end=range2_end)}
             p1.add_layout(LinearAxis(y_range_name="right"), 'right')
             self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
@@ -52,7 +52,7 @@ class ComparisonPanel(PairedAnalysis):
             
 
             # FIGURE 2
-            select = figure(plot_height=40, plot_width=300, y_range=p1.y_range,
+            select = figure(height=40,width=300, y_range=p1.y_range,
                       x_axis_type="datetime", y_axis_type=None,
                       tools="", toolbar_location=None, background_fill_color="#efefef",sizing_mode="stretch_width",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
             select.line(x='x_values', y='y_values1', source=self.data_sources['raw_data'],color="black",line_width=2)
@@ -62,7 +62,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['select'] = select
 
             # FIGURE 3
-            pf1 = figure(plot_width=300,plot_height=60,sizing_mode="stretch_width",x_axis_type='datetime')
+            pf1 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
             self.plots['filter_line1'] = pf1.circle(x='x_values',y='filter1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False)
 
             pf1.yaxis.ticker=[]
@@ -74,7 +74,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_plot1'] = pf1
 
             # FIGURE 4
-            pf2 = figure(plot_width=300,plot_height=60,sizing_mode="stretch_width",x_axis_type='datetime')
+            pf2 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
             self.plots['filter_line2'] = pf2.circle(x='x_values',y='filter2',source=self.data_sources['raw_data'],color="green",alpha=1.0,visible=False)
             pf2.yaxis.ticker=[]
             pf2.toolbar.logo = None
@@ -85,7 +85,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_plot2'] = pf2
 
             # FIGURE 5
-            p3 = figure(plot_width=300,plot_height=300,sizing_mode="stretch_both",title='')
+            p3 = figure(width=300,height=300,sizing_mode="stretch_both",title='')
             p3.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
             p3.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
             p3.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
@@ -97,7 +97,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['correlations'] = p3
             self.plots['correlations_slope'] = p3_slope
 
-            p4 = figure(plot_width=300,plot_height=300,sizing_mode="stretch_both",title='Cross-correlation')
+            p4 = figure(width=300,height=300,sizing_mode="stretch_both",title='Cross-correlation')
             self.plots['cc_line'] = p4.line(x='x_values',y='cross_corr',source=self.data_sources['source_cross_corr'],color="black",alpha=1.0,visible=False)
             p4.yaxis.axis_label = "corr. coef."
             p4.xaxis.axis_label = "# days"
