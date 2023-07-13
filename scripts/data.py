@@ -15,7 +15,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
     if not cache:
         tables = []
         for tn in table_names:
-            print(tn)
             df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
@@ -24,6 +23,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
         # check for duplicates
         for t,tn in zip(tables,table_names):
             print('There are following duplicates in table ' + tn + " :" + str(t.index[t.index.duplicated()]))
+            print(t.index)
 
         df = pd.concat(tables,axis=1,join='outer')
 
@@ -32,10 +32,11 @@ def load_tables(table_names,api_key,base_id,cache=False):
             assert (df.index[i] + pd.offsets.Day()) == df.index[i+1], "Error, no gaps in data allowed. The following consecutive data points are not a day apart: %s %s" % (str(df.index[i]),str(df.index[i+1]))
 
         # let's load up the metadata
-        md = convert_to_dataframe(airtable_download('Metadata',api_key='keyCkIHRFu2ey2pnK',base_id='appIRvcTRGQflKWqD'),index_column="Name")
+        md = convert_to_dataframe(airtable_download('Metadata',api_key=api_key,base_id=base_id),index_column="Name")
         md['Start of valid records'] = pd.to_datetime(md['Start of valid records'])
 
         # convert bool columns to float
+        print(md.index)
         for col in df.columns:
             print(col)
             if md['Units'].loc[col] == 'bool':
@@ -87,7 +88,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
                 else:
                     return s
             df[col] = df[col].apply(nandict_to_nan)
-    
 
         # replace NaN with default values if they are specified, but only after 'Start of valid records'
         for col in df.columns:
@@ -127,7 +127,7 @@ def load_blood_tests(view_names,api_key,base_id,cache=False):
 
         blood_tests = {}
         for view in view_names:
-            blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=base_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)
+            blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=api_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)
         
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
