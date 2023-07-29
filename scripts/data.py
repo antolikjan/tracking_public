@@ -6,7 +6,7 @@ import numpy.ma
 import pickle
 import math
 from functools import partial
-
+# from airtable import Airtable
 
 def load_tables(table_names,api_key,base_id,cache=False):
     """
@@ -16,7 +16,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
     if not cache:
         tables = []
         for tn in table_names:
-            print(tn)
+            # print(tn)
             df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
@@ -30,18 +30,12 @@ def load_tables(table_names,api_key,base_id,cache=False):
         
 
 
-        # blt = convert_to_dataframe(airtable_download('BloodTest', api_key='keyBQivgbhrgIZQS9', base_id='appL3Wb1C7NvHTDl1'), index_column="Date", datatime_index=True)
-        # blt.sort_index(inplace=True)
-        # blt.drop(blt.index[:1], inplace=True)
-
         # check if no days are missing 
         for i in range(0,len(df.index)-1):
             assert (df.index[i] + pd.offsets.Day()) == df.index[i+1], "Error, no gaps in data allowed. The following consecutive data points are not a day apart: %s %s" % (str(df.index[i]),str(df.index[i+1]))
 
         # let's load up the metadata
-        md = convert_to_dataframe(airtable_download('Metadata',api_key='keyCkIHRFu2ey2pnK',base_id='appIRvcTRGQflKWqD'),index_column="Name")
-        # md = convert_to_dataframe(airtable_download('Metadata',api_key=api_key,base_id=base_id),index_column="Name")
-
+        md = convert_to_dataframe(airtable_download('Metadata',api_key=api_key,base_id=base_id),index_column="Name")
         md['Start of valid records'] = pd.to_datetime(md['Start of valid records'])
 
         # convert bool columns to float
@@ -115,6 +109,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
     categories = {}
     for category in table_names:
         categories[category] = md.loc[md['Category'] == category].index.tolist()
+        print(categories[category])
 
     
     # print(f'printing the populated categories: {categories}')
@@ -136,9 +131,17 @@ def load_PANAS_tables(api_key,base_id):
 
 def load_blood_tests(view_names,api_key,base_id,cache=False):
 
-    # print("NOW LOADING BLOOD TEST DATA")
+
+    # airtable = Airtable(base_id, 'BloodTest', api_key=api_key)
+
+    # # Get records from the specified view
+    # records = airtable.get_all(view='WBC Rest')
+    # print(records)
+
     if not cache:
 
+
+        # print(convert_to_dataframe(airtable_download('BloodTest',api_key=api_key,base_id=base_id,params_dict = {'view' : 'WBC Rest'}), index_column="Date",datatime_index=True))
         blood_tests = {}
         for view in view_names:
             blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=api_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)

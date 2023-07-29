@@ -102,6 +102,7 @@ class AnalysisPanel():
           self.ui_elements[widget_name] = widget
           for action in actions_to_respond_to:
               self.ui_elements[widget_name].on_change(action, self.update)
+              
 
 
 
