@@ -14,15 +14,15 @@ class ComparisonPanel(PairedAnalysis):
 
 
             ##### DATA
-            self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : data['RHR'],'y_values' : data['Steps']})
+            self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : data['RHR'],'y_values' : data['DistanceFitbit']})
             self.data_sources['source_corr_mean'] = ColumnDataSource(data={'x_values' : [],'y_values' : [], 'sem-' : [], 'sem+' : []})
             self.data_sources['source_cross_corr'] = ColumnDataSource(data={'x_values' : [data['RHR']*0],'cross_corr' : [data['RHR']*0]})
             self.data_sources['source_bar_plot'] = ColumnDataSource(data={'x' : ['1','2','3'] ,'mean' : [4,5,6],'sem-' : [7,8,9],'sem+' : [7,8,9]})
             self.data_sources['source_bar_plot_p_values'] = ColumnDataSource(data={'x' : ['bogus']})
 
             ##### PLOTS
-            range1_start = data['Steps'].min()-0.1*(data['Steps'].max()-data['Steps'].min())
-            range1_end = data['Steps'].max()+0.1*(data['Steps'].max()-data['Steps'].min())
+            range1_start = data['DistanceFitbit'].min()-0.1*(data['DistanceFitbit'].max()-data['DistanceFitbit'].min())
+            range1_end = data['DistanceFitbit'].max()+0.1*(data['DistanceFitbit'].max()-data['DistanceFitbit'].min())
             range2_start = data['RHR'].min()-0.1*(data['RHR'].max()-data['RHR'].min())
             range2_end = data['RHR'].max()+0.1*(data['RHR'].max()-data['RHR'].min())
 
@@ -39,7 +39,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False)   
             p1.yaxis[0].major_label_text_color = "navy"
             p1.yaxis[1].major_label_text_color = "green"
-            p1.yaxis[0].axis_label = "Steps"
+            p1.yaxis[0].axis_label = "DistanceFitbit"
             p1.yaxis[1].axis_label = "RHR"
             p1.toolbar_location = None
             self.plots['time_series'] = p1
@@ -89,7 +89,7 @@ class ComparisonPanel(PairedAnalysis):
             p3.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
             p3.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
             p3.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
-            p3.xaxis.axis_label = "Steps"
+            p3.xaxis.axis_label = "DistanceFitbit"
             p3.yaxis.axis_label = "RHR"
             p3.toolbar_location = None
             p3_slope = Slope(gradient=0, y_intercept=0, line_color='orange', line_dash='dashed', line_width=3.5)
@@ -127,6 +127,7 @@ class ComparisonPanel(PairedAnalysis):
 
           self.data_sources['source_corr'].data = {'x_values' : d1 , 'y_values' : d2}
 
+          print("Length of array 1 and 2:" + str(len(d1.tolist())) + "," + str(len(d2.tolist())))
           m, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='mean', bins=min(20,len(set(d1))))
           std, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='std', bins=min(20,len(set(d1))))
           count, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='count', bins=min(20,len(set(d1))))

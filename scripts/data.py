@@ -15,6 +15,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
     if not cache:
         tables = []
         for tn in table_names:
+            print(tn)
             df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
@@ -23,7 +24,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
         # check for duplicates
         for t,tn in zip(tables,table_names):
             print('There are following duplicates in table ' + tn + " :" + str(t.index[t.index.duplicated()]))
-            print(t.index)
 
         df = pd.concat(tables,axis=1,join='outer')
 
@@ -34,11 +34,10 @@ def load_tables(table_names,api_key,base_id,cache=False):
         # let's load up the metadata
         md = convert_to_dataframe(airtable_download('Metadata',api_key=api_key,base_id=base_id),index_column="Name")
         md['Start of valid records'] = pd.to_datetime(md['Start of valid records'])
+        md['Ignore'] = numpy.nan_to_num(pd.to_numeric(md['Ignore']))
 
         # convert bool columns to float
-        print(md.index)
         for col in df.columns:
-            print(col)
             if md['Units'].loc[col] == 'bool':
                df[col] = pd.to_numeric(df[col])
 
@@ -89,12 +88,24 @@ def load_tables(table_names,api_key,base_id,cache=False):
                     return s
             df[col] = df[col].apply(nandict_to_nan)
 
+        # remove columns that are strings or to be ignored
+        to_be_droped=[]
+        for col in df.columns:
+            if md['Units'].loc[col] == 'string' or md['Ignore'].loc[col]==1:
+               to_be_droped.append(col)
+        
+        print("Number of columns before cleaning:" + str(len(df.columns)))
+        df = df.drop(to_be_droped,axis=1)
+        print("Number of columns after cleaning:" + str(len(df.columns)))
+        
         # replace NaN with default values if they are specified, but only after 'Start of valid records'
         for col in df.columns:
             if md['Units'].loc[col] != 'string':
                 df[col] = numpy.nan_to_num(df[col].to_numpy(float,na_value=numpy.nan),md['Default'].loc[col]) if not math.isnan(md['Default'].loc[col]) else df[col].to_numpy(float,na_value=numpy.nan)
                 if not pd.isnull(md['Start of valid records'].loc[col]):
                    df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
+                if not pd.isnull(md['End of valid records'].loc[col]):
+                   df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
 
         # cache the data
         pickle.dump((df,md),open('./locals/cache.pickle','bw'))
@@ -119,8 +130,6 @@ def load_PANAS_tables(api_key,base_id):
 
     pe = sum([df['Positive Effects'] for df in tables])/4
     ne = sum([df['Negative Effects'] for df in tables])/4
-    
-    
 
 def load_blood_tests(view_names,api_key,base_id,cache=False):
     if not cache:
