@@ -116,7 +116,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
     #
     categories = {}
     for category in table_names:
-        categories[category] = md.loc[md['Category'] == category].index.tolist()
+        categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
 
     return df,md,categories
 
