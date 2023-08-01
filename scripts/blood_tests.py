@@ -1,10 +1,5 @@
 import pandas as pd
-from datetime import datetime
-from re import template
-from bokeh.core.properties import Color
-from turtle import color, title, width
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div, CustomJS
-from bokeh.models.widgets import Panel
 
 from scripts.ui_framework.blood_tests_panel import BloodTestPanel
 

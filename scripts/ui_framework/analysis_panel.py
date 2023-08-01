@@ -1,6 +1,5 @@
 from bokeh.models import Row, Div, Spacer, Panel
 from scripts.data import categories, filter_data, cross_corr, both_valid, data_aquisition_overlap
-from functools import partial
 
 
 class AnalysisPanel():

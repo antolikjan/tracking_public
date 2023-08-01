@@ -1,4 +1,3 @@
-from tkinter.tix import Tree
 import pandas as pd
 from scripts.airtable import airtable_download , convert_to_dataframe
 import numpy
@@ -6,7 +5,6 @@ import numpy.ma
 import pickle
 import math
 from functools import partial
-# from airtable import Airtable
 
 def load_tables(table_names,api_key,base_id,cache=False):
     """

@@ -1,10 +1,6 @@
-# from tkinter.tix import Select
-from re import S
-from bokeh.models import Panel, DataTable, Select
-from bokeh.models import Row, Div, Spacer, Panel, Column
+from bokeh.models import Panel, Select
+from bokeh.models import Row, Spacer, Panel
 
-from bokeh.models import ColumnDataSource
-from scripts.data import filter_data
 
 class BloodTestPanel():
     def __init__(self, data):

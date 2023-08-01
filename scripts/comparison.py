@@ -1,4 +1,3 @@
-from turtle import width
 from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, Panel, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
