@@ -10,7 +10,7 @@ class PairedAnalysis(AnalysisPanel):
 
           ### WIDGETS
           self.register_widget(Select(title="Category",  options=list(categories.keys()), value = 'Fitbit'),'select_category1',['value'])
-          self.register_widget(Select(title = 'Name', value = 'Steps', options = list(categories['Fitbit'])),'select_variable1',['value'])
+          self.register_widget(Select(title = 'Name', value = 'DistanceFitbit', options = list(categories['Fitbit'])),'select_variable1',['value'])
 
           self.register_widget(Select(title="Category",  options=['None']+list(categories.keys()), value = 'Fitbit'),'select_category2',['value'])
           self.register_widget(Select(title = 'Name', value = 'RHR', options = list(categories['Fitbit'])),'select_variable2',['value'])
@@ -24,7 +24,7 @@ class PairedAnalysis(AnalysisPanel):
           self.register_widget(RadioButtonGroup(labels=["Var2 -> Var1","no shift","Var1 -> Var2"], active=1),'shift_button_group',['active'])
 
           ### DATA
-          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['Steps'],'y_values2' : data['RHR'],'y_values_filtered' : data['Steps'],'y_values_filtered' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
+          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['DistanceFitbit'],'y_values2' : data['RHR'],'y_values_filtered' : data['DistanceFitbit'],'y_values_filtered' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
 
       def compose_widgets(self):
           widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category1"], self.ui_elements["select_variable1"],self.ui_elements["select_filter1"],self.ui_elements["select_sigma1"],sizing_mode="fixed", width=120,height=500)

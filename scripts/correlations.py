@@ -1,7 +1,6 @@
 from functools import partial
 from bokeh.plotting import figure
-from bokeh.models.widgets import Panel
-from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph
+from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, Panel
 from scripts.data import both_valid, data_aquisition_overlap_non_nans
 import scipy.stats
 import numpy

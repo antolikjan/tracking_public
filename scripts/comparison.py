@@ -1,4 +1,4 @@
-from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, Panel, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
+from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from scripts.data import cross_corr, both_valid, data_aquisition_overlap, data_aquisition_overlap_non_nans
@@ -14,15 +14,15 @@ class ComparisonPanel(PairedAnalysis):
 
 
             ##### DATA
-            self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : data['RHR'],'y_values' : data['Steps']})
+            self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : data['RHR'],'y_values' : data['DistanceFitbit']})
             self.data_sources['source_corr_mean'] = ColumnDataSource(data={'x_values' : [],'y_values' : [], 'sem-' : [], 'sem+' : []})
             self.data_sources['source_cross_corr'] = ColumnDataSource(data={'x_values' : [data['RHR']*0],'cross_corr' : [data['RHR']*0]})
             self.data_sources['source_bar_plot'] = ColumnDataSource(data={'x' : ['1','2','3'] ,'mean' : [4,5,6],'sem-' : [7,8,9],'sem+' : [7,8,9]})
             self.data_sources['source_bar_plot_p_values'] = ColumnDataSource(data={'x' : ['bogus']})
 
             ##### PLOTS
-            range1_start = data['Steps'].min()-0.1*(data['Steps'].max()-data['Steps'].min())
-            range1_end = data['Steps'].max()+0.1*(data['Steps'].max()-data['Steps'].min())
+            range1_start = data['DistanceFitbit'].min()-0.1*(data['DistanceFitbit'].max()-data['DistanceFitbit'].min())
+            range1_end = data['DistanceFitbit'].max()+0.1*(data['DistanceFitbit'].max()-data['DistanceFitbit'].min())
             range2_start = data['RHR'].min()-0.1*(data['RHR'].max()-data['RHR'].min())
             range2_end = data['RHR'].max()+0.1*(data['RHR'].max()-data['RHR'].min())
 
@@ -30,7 +30,7 @@ class ComparisonPanel(PairedAnalysis):
             self.register_widget(Toggle(label="Show stats",button_type="success"),'show_stats_button',['active'])
 
             # FIGURE 1
-            p1 = figure(plot_width=300,plot_height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
+            p1 = figure(width=300,height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
             p1.extra_y_ranges = {"right" : Range1d(start=range2_start,end=range2_end)}
             p1.add_layout(LinearAxis(y_range_name="right"), 'right')
             self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
@@ -39,7 +39,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
             p1.yaxis[0].major_label_text_color = "navy"
             p1.yaxis[1].major_label_text_color = "green"
-            p1.yaxis[0].axis_label = "Steps"
+            p1.yaxis[0].axis_label = "DistanceFitbit"
             p1.yaxis[1].axis_label = "RHR"
             p1.toolbar_location = None
             self.plots['time_series'] = p1
@@ -52,7 +52,7 @@ class ComparisonPanel(PairedAnalysis):
             
 
             # FIGURE 2
-            select = figure(plot_height=40, plot_width=300, y_range=p1.y_range,
+            select = figure(height=40,width=300, y_range=p1.y_range,
                       x_axis_type="datetime", y_axis_type=None,
                       tools="", toolbar_location=None, background_fill_color="#efefef",sizing_mode="stretch_width",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
             select.line(x='x_values', y='y_values1', source=self.data_sources['raw_data'],color="black",line_width=2)
@@ -62,7 +62,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['select'] = select
 
             # FIGURE 3
-            pf1 = figure(plot_width=300,plot_height=60,sizing_mode="stretch_width",x_axis_type='datetime')
+            pf1 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
             self.plots['filter_line1'] = pf1.circle(x='x_values',y='filter1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False)
 
             pf1.yaxis.ticker=[]
@@ -74,7 +74,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_plot1'] = pf1
 
             # FIGURE 4
-            pf2 = figure(plot_width=300,plot_height=60,sizing_mode="stretch_width",x_axis_type='datetime')
+            pf2 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
             self.plots['filter_line2'] = pf2.circle(x='x_values',y='filter2',source=self.data_sources['raw_data'],color="green",alpha=1.0,visible=False)
             pf2.yaxis.ticker=[]
             pf2.toolbar.logo = None
@@ -85,11 +85,11 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['filtered_plot2'] = pf2
 
             # FIGURE 5
-            p3 = figure(plot_width=300,plot_height=300,sizing_mode="stretch_both",title='')
+            p3 = figure(width=300,height=300,sizing_mode="stretch_both",title='')
             p3.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
             p3.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
             p3.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
-            p3.xaxis.axis_label = "Steps"
+            p3.xaxis.axis_label = "DistanceFitbit"
             p3.yaxis.axis_label = "RHR"
             p3.toolbar_location = None
             p3_slope = Slope(gradient=0, y_intercept=0, line_color='orange', line_dash='dashed', line_width=3.5)
@@ -97,7 +97,7 @@ class ComparisonPanel(PairedAnalysis):
             self.plots['correlations'] = p3
             self.plots['correlations_slope'] = p3_slope
 
-            p4 = figure(plot_width=300,plot_height=300,sizing_mode="stretch_both",title='Cross-correlation')
+            p4 = figure(width=300,height=300,sizing_mode="stretch_both",title='Cross-correlation')
             self.plots['cc_line'] = p4.line(x='x_values',y='cross_corr',source=self.data_sources['source_cross_corr'],color="black",alpha=1.0,visible=False)
             p4.yaxis.axis_label = "corr. coef."
             p4.xaxis.axis_label = "# days"
@@ -127,6 +127,7 @@ class ComparisonPanel(PairedAnalysis):
 
           self.data_sources['source_corr'].data = {'x_values' : d1 , 'y_values' : d2}
 
+          print("Length of array 1 and 2:" + str(len(d1.tolist())) + "," + str(len(d2.tolist())))
           m, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='mean', bins=min(20,len(set(d1))))
           std, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='std', bins=min(20,len(set(d1))))
           count, bins, _ = scipy.stats.binned_statistic(d1.tolist(), d2.tolist(), statistic='count', bins=min(20,len(set(d1))))

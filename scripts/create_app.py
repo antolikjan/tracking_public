@@ -1,4 +1,4 @@
-from bokeh.models.widgets import Tabs
+from bokeh.models import Tabs
 import scripts.comparison, scripts.correlations, scripts.relationships, scripts.event_based
 import scripts.blood_tests
 

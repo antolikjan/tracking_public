@@ -6,15 +6,10 @@ import locals.config as cf
 
 cache=False
 
+blood_tests = load_blood_tests(api_key=cf.config['airtable_api_key'],base_id=cf.config['airtable_base_id'],cache=cache)
+
 df,metadata,categories = load_tables(cf.config['tables_to_load'],api_key=cf.config['airtable_api_key'],base_id=cf.config['airtable_base_id'],cache=cache)
 
-rm = RelationshipMetadata(metadata,initialize=False)
+rm = RelationshipMetadata(metadata,initialize=True)
 
 
-
-# view_names = ['WBC Rest','WBC Differential','Immunity','Minerals','Kidney Function','Liver Function','Pancreas','Proteins','Glucose','Lipids','Thyroid','Hormones','Vitamins','Prostate','BiologicalAgeScores','Cardio']
-# blood_tests = load_blood_tests(view_names, api_key='keyBQivgbhrgIZQS9', base_id='appL3Wb1C7NvHTDl1', cache=cache)
-
-blood_tests = load_blood_tests(['WBC Rest','WBC Differential','Immunity','Minerals','Kidney Function','Liver Function','Pancreas','Proteins','Glucose','Lipids','Thyroid','Hormones','Vitamins','Prostate','BiologicalAgeScores','Cardio'],api_key=cf.config['airtable_api_key'],base_id=cf.config['airtable_base_id'],cache=cache)
-
-curdoc().add_root(create_app(df,metadata,categories,rm, blood_tests))
