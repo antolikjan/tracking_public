@@ -105,10 +105,10 @@ def load_tables(table_names,api_key,base_id,cache=False):
         for col in df.columns:
             if md['Units'].loc[col] != 'string':
                 df[col] = numpy.nan_to_num(df[col].to_numpy(float,na_value=numpy.nan),md['Default'].loc[col]) if not math.isnan(md['Default'].loc[col]) else df[col].to_numpy(float,na_value=numpy.nan)
-                if not pd.isnull(md['Start of valid records'].loc[col]):
-                   df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
-                if not pd.isnull(md['End of valid records'].loc[col]):
-                   df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
+                # if not pd.isnull(md['Start of valid records'].loc[col]):
+                #    df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
+                # if not pd.isnull(md['End of valid records'].loc[col]):
+                #    df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
 
         # cache the data
         pickle.dump((df,md),open('./locals/cache.pickle','bw'))
@@ -137,13 +137,16 @@ def load_blood_tests(api_key,base_id,cache=False):
     table = Table(api_key, base_id, 'BloodTest')
 
     views = {
+        "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCHC (g/dl)"] ,
+        # "MCHC (g/dl)", "Palettel (G/L)", "Palettel Distribution Width %", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time(s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
+        # "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes (%)", "Esophiles (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
         "Cardio" : ["Troponin_hs (ng/l)","LP-PLA2 (U/I)"]
     }
 
     if not cache:
         blood_tests = {}
         for view in views:
-            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]), index_column="Date",datatime_index=True)
+            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),datatime_index=True)
             print(blood_tests[view].columns)
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
