@@ -1,14 +1,17 @@
 import pandas as pd
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div, CustomJS
 
-from scripts.ui_framework.blood_tests_panel import BloodTestPanel
+from scripts.ui_framework.analysis_panel import AnalysisPanel
 
 
-class BloodTests(BloodTestPanel):
-    def __init__(self, data, metadata):
-        BloodTestPanel.__init__(self,  data)
-        self.metadata = metadata
-        self.data = data
+class BloodTests(AnalysisPanel):
+    def __init__(self, data, categories, metadata, title):
+        AnalysisPanel.__init__(self,data, categories, metadata, title)
+        self.views = data.keys()
+
+        self.register_widget(Select(title="List of Views", options=list(self.views), value='WBC Rest'), 'views',  ['value'])
+        self.table = self.ui_elements['views'].value
+        
 
 
     def compose_widgets(self):
@@ -17,13 +20,13 @@ class BloodTests(BloodTestPanel):
         w1 = Row(widgets_var3, width=240)
         return w1
 
-    def compose_tables(self):
+    def compose_plots(self):
         current_table = self.table 
-        data = self.data[current_table]
+        data = self.raw_data[current_table]
         
-        counter = 20
-        columns = [TableColumn(field='Date', title='Date', width=200)]
-        for col in data.columns[1:]:  # Exclude 'Date' column as it already has a custom formatter
+
+        columns = []
+        for col in data.columns:
             column_with_data = data[col]
 
             color_map = {}
@@ -45,20 +48,21 @@ class BloodTests(BloodTestPanel):
             
             template_js += '%> <div style="background-color: <%- clr %>;"> <%- value%> </div>'
 
-            # print(template_js)
 
             cell_formatter = HTMLTemplateFormatter(template=template_js)
             columns.append(TableColumn(field=col, title=col, formatter=cell_formatter))
 
-            counter -= 1
-            if (counter < 0):
-                break
 
 
         source = ColumnDataSource(data=data)
         table = DataTable(source=source, columns=columns, width=1400, height=1000)
 
         return table
+
+
+    def update_plots(self):
+        super().update_plots()
+        self.table = self.ui_elements['views'].value        
 
         
 
@@ -89,11 +93,11 @@ def classify_range(metadata, marker, col):
         # 1) optimal min. is not a NaN value
         if not pd.isna(opt_min):
             if not pd.isna(opt_max) and not pd.isna(norm_min):
-                return compare(opt_min, opt_max, norm_min, norm_max=opt_max)
+                return compare(marker, opt_min, opt_max, norm_min, norm_max=opt_max)
             elif not pd.isna(opt_max) and not pd.isna(norm_max):
-                return compare(opt_min, opt_max, norm_min=opt_min, norm_max=norm_max)
+                return compare(marker, opt_min, opt_max, norm_min=opt_min, norm_max=norm_max)
             elif not pd.isna(norm_min) and not pd.isna(norm_max):
-                return compare(opt_min, opt_max=norm_max, norm_min=norm_min, norm_max=norm_max)
+                return compare(marker, opt_min, opt_max=norm_max, norm_min=norm_min, norm_max=norm_max)
             
 
             elif not pd.isna(opt_max) and pd.isna(norm_min) and pd.isna(norm_max):
@@ -125,7 +129,7 @@ def classify_range(metadata, marker, col):
             # 2) opt_max is not a NaN value
             if not pd.isna(opt_max):
                 if not pd.isna(norm_min) and not pd.isna(norm_max):
-                    return compare(opt_min=norm_min, opt_max=opt_max, norm_min=norm_min, norm_max=norm_max)
+                    return compare(marker, opt_min=norm_min, opt_max=opt_max, norm_min=norm_min, norm_max=norm_max)
                 elif not pd.isna(norm_min) and pd.isna(norm_max):
                     if norm_min<=marker<=opt_max:         # in range (norm_min, opt_max) -> normal
                         return 2
@@ -162,7 +166,7 @@ def classify_range(metadata, marker, col):
                     return 3
 
     else:      #if every indicator is present, proceed 
-        return compare(opt_min, opt_max, norm_min, norm_max)
+        return compare(marker, opt_min, opt_max, norm_min, norm_max)
    
 
 def color_mapper(metadata, col_name, cell_value):
