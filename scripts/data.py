@@ -140,7 +140,9 @@ def load_blood_tests(api_key,base_id,cache=False):
         "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCHC (g/dl)"] ,
         # "MCHC (g/dl)", "Palettel (G/L)", "Palettel Distribution Width %", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time(s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
         # "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes (%)", "Esophiles (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
-        "Cardio" : ["Troponin_hs (ng/l)","LP-PLA2 (U/I)"]
+        "Cardio" : ["LP-PLA2 (U/I)"]
+        
+        # "Pancreas" : ["Amalyse"]
     }
 
     if not cache:

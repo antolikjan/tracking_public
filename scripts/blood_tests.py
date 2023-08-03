@@ -10,19 +10,21 @@ class BloodTests(AnalysisPanel):
         self.views = data.keys()
 
         self.register_widget(Select(title="List of Views", options=list(self.views), value='WBC Rest'), 'views',  ['value'])
-        self.table = self.ui_elements['views'].value
+        self.table = 'WBC Rest'
+        self.plots[self.table] = self.compose_table(self.table)
         
-
-
+      
+        
     def compose_widgets(self):
-        widgets_var3 = Column(Div(text=""" """),self.ui_elements["views"], sizing_mode="fixed", width=120,height=500)  
-
-        w1 = Row(widgets_var3, width=240)
-        return w1
+        dropdown = Column(Div(text=""" """),self.ui_elements["views"], sizing_mode="fixed", width=120,height=500)  
+        widg = Row(dropdown, width=240)
+        return widg
 
     def compose_plots(self):
-        current_table = self.table 
-        data = self.raw_data[current_table]
+        return Column(self.plots[self.table])
+
+    def compose_table(self,view):
+        data = self.raw_data[view]
         
 
         columns = []
@@ -61,9 +63,14 @@ class BloodTests(AnalysisPanel):
 
 
     def update_plots(self):
-        super().update_plots()
-        self.table = self.ui_elements['views'].value        
+        self.plots.clear()
+        self.plots[self.table] = self.compose_table(self.table)
+        # self.plots['WBC Rest'].visible = False
 
+        
+
+    def update_widgets(self):
+        self.table = self.ui_elements['views'].value
         
 
 def compare(x, opt_min, opt_max, norm_min, norm_max):
