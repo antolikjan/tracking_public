@@ -28,6 +28,7 @@ class BloodTests(AnalysisPanel):
         
 
         columns = []
+        no_data_for_column = False
         for col in data.columns:
             column_with_data = data[col]
 
@@ -37,10 +38,18 @@ class BloodTests(AnalysisPanel):
                     continue
 
                 cell_color = color_mapper(self.metadata, entry, col)
+                if cell_color == 'NA':
+                    no_data_for_column = True
+                    break
                 if cell_color in color_map:
                     color_map[cell_color].add(entry)
                 else:
                     color_map[cell_color] = set([entry])
+
+            if no_data_for_column:
+                no_data_for_column = False
+                continue
+
 
             template_js = "<% var clr;"
             template_if_line = 'if (value >= {} && value <= {}) clr = "{}"; '
@@ -88,13 +97,18 @@ def classify_range(metadata, marker, col):
         return "NaN"
 
     marker = float(marker)
-    norm_min = pd.to_numeric(metadata.loc[col, 'Normal value min'], errors='coerce')
-    norm_max = pd.to_numeric(metadata.loc[col, 'Normal value max'], errors='coerce')
+    try: 
+        norm_min = pd.to_numeric(metadata.loc[col, 'Normal value min'], errors='coerce')
+        norm_max = pd.to_numeric(metadata.loc[col, 'Normal value max'], errors='coerce')
 
-    opt_min = pd.to_numeric(metadata.loc[col, 'Optimal value min'], errors='coerce')
-    opt_max = pd.to_numeric(metadata.loc[col, 'Optimal value max'], errors='coerce')
-  
+        opt_min = pd.to_numeric(metadata.loc[col, 'Optimal value min'], errors='coerce')
+        opt_max = pd.to_numeric(metadata.loc[col, 'Optimal value max'], errors='coerce')
     
+
+    except:
+        print(f'There is no data for the marker "{col}" in metadata')
+        return "NA"
+
     if pd.isna(norm_min) or pd.isna(norm_max) or pd.isna(opt_min) or pd.isna(opt_max):    # any of the range indicators is not present
 
         # 1) optimal min. is not a NaN value
@@ -175,10 +189,12 @@ def classify_range(metadata, marker, col):
     else:      #if every indicator is present, proceed 
         return compare(marker, opt_min, opt_max, norm_min, norm_max)
    
+   
 
 def color_mapper(metadata, col_name, cell_value):
     range_value = classify_range(metadata, col_name, cell_value)
-    color_code = {1: '#008000',  # Green
-                  2: '#FFFF00',  # Yellow
-                  3: '#FF0000'}  # Red
+    color_code = {1: '#2fd01a',  # Green
+                  2: '#f6e741',  # Yellow
+                  3: '#fb3232',  # Red
+                  "NA" : 'NA'}  
     return color_code.get(range_value, '#FFFFFF')  # Default to White if not found
