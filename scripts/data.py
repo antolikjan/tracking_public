@@ -105,10 +105,10 @@ def load_tables(table_names,api_key,base_id,cache=False):
         for col in df.columns:
             if md['Units'].loc[col] != 'string':
                 df[col] = numpy.nan_to_num(df[col].to_numpy(float,na_value=numpy.nan),md['Default'].loc[col]) if not math.isnan(md['Default'].loc[col]) else df[col].to_numpy(float,na_value=numpy.nan)
-                # if not pd.isnull(md['Start of valid records'].loc[col]):
-                #    df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
-                # if not pd.isnull(md['End of valid records'].loc[col]):
-                #    df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
+                if not pd.isnull(md['Start of valid records'].loc[col]):
+                   df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
+                if not pd.isnull(md['End of valid records'].loc[col]):
+                   df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
 
         # cache the data
         pickle.dump((df,md),open('./locals/cache.pickle','bw'))
@@ -137,12 +137,26 @@ def load_blood_tests(api_key,base_id,cache=False):
     table = Table(api_key, base_id, 'BloodTest')
 
     views = {
-        "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCHC (g/dl)"] ,
-        # "MCHC (g/dl)", "Palettel (G/L)", "Palettel Distribution Width %", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time(s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
-        # "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes (%)", "Esophiles (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
-        "Cardio" : ["LP-PLA2 (U/I)"]
-        
-        # "Pancreas" : ["Amalyse"]
+        "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCH  (pg)", "MCHC (g/dl)","Palettel (G/L)", "Palettel Distribution Width (%)", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time (s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
+        "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes  (%)", "Esophiles  (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
+        "Immunity" : ["CRP (mg/l)", "IG (g/l)", "IgA (g/l)", "IgM (g/l)", "IgE (IU/l)", "Rheumatoid Factor (kU/l)", "IL 6 (ng/l)"],
+        "Minerals" : ["Na (mEq/L)", "K (mEq/L)", "Cl (mmol/l)", "Ca (mmol/l)", "Ca(corig) (mmol/l)", "Fe (mumol/l)", "Mg (mmol/l)", "P (mmol/l)", "Cu (μmol/L)"],
+        "Kidney Function" : ["Urea (mmol/L)", "Kreatinin  (μmol/l)", "GFR (CKD-EPI) (ml/s/1.73 m2)", "eGFR (Lund-Malmo) (ml/s/1.73 m2)", "Uric acid (μmol/l)", "Cystain C (mg/l)", "GF Cystain C (ml/s/1,73 m2)"],
+        "Liver Function" : ["Bilirubin (overall) (µmol/l)", "Bilirubin (conjugated) (µmol/l)", "ALT (μkat/l)", "AST (μkat/l)", "GGT (μkat/l)", "ALP (μkat/l)"],
+        "Pancreas" : ["Amylase pancreatic (blood) (μkat/l)", "Amalyse", "Lipase (μkat/l)"],
+        "Proteins" : ["Proteins (g/L)", "Ablumin (g/L)", "Ferritin (ug/L)"],
+        "Cardio" : ["Troponin_hs (ng/l)", "LP-PLA2 (U/I)"],
+        "Glucose" : ["Fasting Glucose (mmol/l)", "HOMA-IR ()", "QUICKI ()", "HbA1c (mmol/mol)"],
+        "Iron metabolism" : ["Fe (mumol/l)", "Ferritin (ug/L)", "TIBC (umol/l)", "UIBC", "Transferin (g/l)", "TRF saturation (%)"],
+        "Lipids" : ["Cholesterol (mmol/l)", "LDL (mmol/l)", "HDL (mmol/l)", "Tryglicerides (mmol/l)", "Non-HDL cholesterol (mmol/l)", "Chol/HDL ()", "Tryg/HDL ()", "Apolipoprotein A1 (g/L)", "Apolipoprotein B (g/L)", "Lp(a) (g/L)", "Lp(a) (nmol/l)"],
+        "Thyroid" : ["TSH (mU/l)", "free-T4 (pmol/l)"],
+        "Hormones" : ["Insulin (mlU/l)", "IGF-1 (µg/l)", "estradiol (pmol/l)", "testosterone (nmol/l)", "Cortisol (nmol/l)", "DHEAS (μmol/l)"],
+        "Vitamins" : ["Homocystein (µmol/l)", "Vitamin D (nmol/l)", "Folate (nmol/l)", "B12 (pmol/l)"],
+        "Prostate" : ["Total PSA (µg/l)", "Free PSA  (µg/l)", "FPSA/PSA ()"],
+        "BiologicalAgeScores" : ["PhenoAge", "Aging AI 3.0", "YoungAI"],
+        "Inflammation" : ["CRP (mg/l)", "LDH (ukat/l)"],
+        "Cancer" : ["Total PSA (µg/l)", "Free PSA  (µg/l)", "AFP (ug/l)", "Free beta-HCG (ng/ml)"],
+        "PhenoAge" : ["Leukocites (G/L)", "MCV (fl)", "RBC Distribution Width CV (%)", "Lymfocytes (%)", "CRP (mg/l)", "Kreatinin  (μmol/l)", "ALP (μkat/l)", "Ablumin (g/L)", "Fasting Glucose (mmol/l)"]        
     }
 
     if not cache:
