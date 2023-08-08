@@ -11,9 +11,10 @@ class BloodTests(AnalysisPanel):
 
         self.register_widget(Select(title="List of Views", options=list(self.views), value='WBC Rest'), 'views',  ['value'])
         self.table = 'WBC Rest'
-        self.plots[self.table] = self.compose_table(self.table)
-        
-      
+        self.data_sources[self.table] = self.raw_data[self.table]
+        self.columns = self.create_columns(self.raw_data[self.table])
+
+        self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), columns=self.columns, width=1400, height=1000)
         
     def compose_widgets(self):
         dropdown = Column(Div(text=""" """),self.ui_elements["views"], sizing_mode="fixed", width=120,height=500)  
@@ -23,10 +24,8 @@ class BloodTests(AnalysisPanel):
     def compose_plots(self):
         return Column(self.plots[self.table])
 
-    def compose_table(self,view):
-        data = self.raw_data[view]
-        
 
+    def create_columns(self,data):
         columns = []
         no_data_for_column = False
         for col in data.columns:
@@ -63,24 +62,26 @@ class BloodTests(AnalysisPanel):
             cell_formatter = HTMLTemplateFormatter(template=template_js)
             columns.append(TableColumn(field=col, title=col, formatter=cell_formatter))
 
+        return columns
 
-
-        source = ColumnDataSource(data=data)
-        table = DataTable(source=source, columns=columns, width=1400, height=1000)
-
-        return table
-
-
-    def update_plots(self):
-        self.plots.clear()
-        self.plots[self.table] = self.compose_table(self.table)
-        # self.plots['WBC Rest'].visible = False
-
-        
 
     def update_widgets(self):
         self.table = self.ui_elements['views'].value
+
+    def update_data(self):
+        self.table = self.ui_elements['views'].value
+        new_data = self.raw_data[self.table]
+        if self.table not in self.data_sources:
+            self.data_sources[self.table] = new_data
+        self.data_sources[self.table].data = new_data
         
+    def update_plots(self):
+        self.table = self.ui_elements['views'].value
+        self.columns = self.create_columns(self.raw_data[self.table])
+        self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), 
+                                            columns=self.columns, 
+                                            width=1400, 
+                                            height=1000)
 
 def compare(x, opt_min, opt_max, norm_min, norm_max):
     if opt_min<=x<=opt_max:
