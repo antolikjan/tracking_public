@@ -15,6 +15,8 @@ class BloodTests(AnalysisPanel):
         self.columns = self.create_columns(self.raw_data[self.table])
 
         self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), columns=self.columns, width=1400, height=1000)
+
+        self.plot_layout = Column(self.plots[self.table])
         
     def compose_widgets(self):
         dropdown = Column(Div(text=""" """),self.ui_elements["views"], sizing_mode="fixed", width=120,height=500)  
@@ -22,7 +24,7 @@ class BloodTests(AnalysisPanel):
         return widg
 
     def compose_plots(self):
-        return Column(self.plots[self.table])
+        return self.plot_layout
 
 
     def create_columns(self,data):
@@ -74,14 +76,20 @@ class BloodTests(AnalysisPanel):
         if self.table not in self.data_sources:
             self.data_sources[self.table] = new_data
         self.data_sources[self.table].data = new_data
-        
+
     def update_plots(self):
         self.table = self.ui_elements['views'].value
         self.columns = self.create_columns(self.raw_data[self.table])
+
+
         self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), 
                                             columns=self.columns, 
                                             width=1400, 
                                             height=1000)
+        # Update the layout object to display the new DataTable
+        self.plot_layout.children = [self.plots[self.table]]
+
+
 
 def compare(x, opt_min, opt_max, norm_min, norm_max):
     if opt_min<=x<=opt_max:
