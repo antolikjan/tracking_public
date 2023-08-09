@@ -1,3 +1,4 @@
+from dataclasses import field
 import pandas as pd
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div, CustomJS
 
@@ -26,8 +27,7 @@ class BloodTests(AnalysisPanel):
     def compose_plots(self):
         return self.plot_layout
 
-
-    def create_columns(self,data):
+    def create_columns(self, data):
         columns = []
         no_data_for_column = False
         for col in data.columns:
@@ -41,25 +41,25 @@ class BloodTests(AnalysisPanel):
                 cell_color = color_mapper(self.metadata, entry, col)
                 if cell_color == 'NA':
                     no_data_for_column = True
+                    columns.append(TableColumn(field=col, title=col, formatter=HTMLTemplateFormatter(template = '<div style="background-color: "#FFFFFF" ;"> </div>')))
                     break
                 if cell_color in color_map:
                     color_map[cell_color].add(entry)
                 else:
-                    color_map[cell_color] = set([entry])
+                    color_map[cell_color] = {entry}
 
             if no_data_for_column:
                 no_data_for_column = False
                 continue
 
-
-            template_js = "<% var clr;"
+            # modifying only the entries that have more than 4 digits after the decimal point
+            template_js = '<% var clr; var formatted_value = value; if (typeof value === "number" && !Number.isInteger(value) && value.toString().includes(".")) { var decimalPartLength = value.toString().split(".")[1].length; if (decimalPartLength > 4) { formatted_value = Number(value).toFixed(4); } }'
             template_if_line = 'if (value >= {} && value <= {}) clr = "{}"; '
 
             for color, value_list in color_map.items():
                 template_js += template_if_line.format(min(value_list), max(value_list), color)
-            
-            template_js += '%> <div style="background-color: <%- clr %>;"> <%- value%> </div>'
 
+            template_js += '%> <div style="background-color: <%- clr %>;"> <%- formatted_value %> </div>'
 
             cell_formatter = HTMLTemplateFormatter(template=template_js)
             columns.append(TableColumn(field=col, title=col, formatter=cell_formatter))
