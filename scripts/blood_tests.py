@@ -59,7 +59,7 @@ class BloodTests(AnalysisPanel):
             for color, value_list in color_map.items():
                 template_js += template_if_line.format(min(value_list), max(value_list), color)
 
-            template_js += '%> <div style="background-color: <%- clr %>;"> <%- formatted_value %> </div>'
+            template_js += '%> <div style="background-color: <%- clr %>;"> <% if (isNaN(formatted_value)) { %> <% formatted_value = "" %> <% } %> <%- formatted_value %> </div>'
 
             cell_formatter = HTMLTemplateFormatter(template=template_js)
             columns.append(TableColumn(field=col, title=col, formatter=cell_formatter))
@@ -206,4 +206,4 @@ def color_mapper(metadata, col_name, cell_value):
                   2: '#f6e741',  # Yellow
                   3: '#fb3232',  # Red
                   "NA" : 'NA'}  
-    return color_code.get(range_value, '#FFFFFF')  # Default to White if not found
+    return color_code.get(range_value, '#EADDCA')  # Default to light brown if not found
