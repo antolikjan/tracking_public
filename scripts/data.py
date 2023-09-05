@@ -163,6 +163,7 @@ def load_blood_tests(api_key,base_id,cache=False):
         blood_tests = {}
         for view in views:
             blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),datatime_index=True)
+            blood_tests[view].sort_values(by="Date", inplace=True)  # Sort the DataFrame by Date
             print(blood_tests[view].columns)
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))

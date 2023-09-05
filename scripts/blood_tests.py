@@ -29,8 +29,10 @@ class BloodTests(AnalysisPanel):
 
     def create_columns(self, data):
         columns = []
+        columns.append(TableColumn(field=data.columns[0], title=data.columns[0]))
+
         no_data_for_column = False
-        for col in data.columns:
+        for col in data.columns[1:]:
             column_with_data = data[col]
 
             color_map = {}
