@@ -1,7 +1,7 @@
-from bokeh.models import Column, Row, Range1d, Div, LinearAxis, RangeTool, Select
+import numpy, pandas
+
+from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource
-import numpy, scipy, pandas
 from scripts.ui_framework.analysis_panel import AnalysisPanel
 
 
