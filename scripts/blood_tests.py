@@ -1,8 +1,7 @@
-from dataclasses import field
 import pandas as pd
-from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, Select, Column, Row, Div
-
+from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div
 from scripts.ui_framework.analysis_panel import AnalysisPanel
+
 
 
 class BloodTests(AnalysisPanel):
@@ -29,10 +28,12 @@ class BloodTests(AnalysisPanel):
 
     def create_columns(self, data):
         columns = []
-        columns.append(TableColumn(field=data.columns[0], title=data.columns[0]))
+
+        # Add the "Date" column as the first TableColumn
+        columns.append(TableColumn(field="index", title="Date", formatter=DateFormatter()))
 
         no_data_for_column = False
-        for col in data.columns[1:]:
+        for col in data.columns:
             column_with_data = data[col]
 
             color_map = {}
