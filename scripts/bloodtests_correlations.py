@@ -1,4 +1,4 @@
-from bokeh.models import Column, Row, Range1d, Div, LinearAxis, RangeTool, Spacer, Label, Span, FactorRange, LabelSet, Select, Slider, RadioButtonGroup
+from bokeh.models import Column, Row, Range1d, Div, LinearAxis, RangeTool, Select
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 import numpy, scipy, pandas

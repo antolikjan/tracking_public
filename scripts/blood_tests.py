@@ -1,6 +1,6 @@
 from dataclasses import field
 import pandas as pd
-from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div, CustomJS
+from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, Select, Column, Row, Div
 
 from scripts.ui_framework.analysis_panel import AnalysisPanel
 
