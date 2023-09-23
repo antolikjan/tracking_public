@@ -1,12 +1,8 @@
-from cmath import isnan
-from queue import Empty
 from bokeh.models import Column, Row, Range1d, Div, LinearAxis, RangeTool, Spacer, Label, Span, FactorRange, LabelSet, Select, Slider, RadioButtonGroup
-from bokeh.transform import factor_cmap
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 import numpy, scipy, pandas
 from scripts.ui_framework.analysis_panel import AnalysisPanel
-from scripts.data import event_weighted_average, event_triggered_change, convert_to_dataframe
 
 
 
@@ -23,14 +19,11 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.register_widget(Select(title="Weighted average",  options=['None','Gauss','PastGauss','FutureGauss'], value = 'None'),"select_filter1",['value'])
 
 
-
-
+        self.views = views
         self.bloodtest_dates = views['WBC Rest'].index
 
         # Populating segmented data
         segmented_data = self.segment_dates('DistanceFitbit')
-        segmented_data.sort_index(inplace=True)
-
         self.new_data = {}
         self.new_data['DistanceFitbit'] = segmented_data
 
@@ -55,8 +48,8 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         p1.add_layout(LinearAxis(y_range_name="right"), 'right')
         self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
         self.plots['circles2'] = p1.circle(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
-        self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False, width = 2)
-        self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
+        # self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False, width = 2)
+        # self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
         p1.yaxis[0].major_label_text_color = "navy"
         p1.yaxis[1].major_label_text_color = "green"
         p1.yaxis[0].axis_label = "DistanceFitbit"
@@ -75,7 +68,6 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category"], self.ui_elements["select_variable1"],sizing_mode="fixed", width=120,height=500)
         widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""),self.ui_elements["select_view"], self.ui_elements["select_variable2"],sizing_mode="fixed", width=120,height=500)  
         w1 = Row(widgets_var1,widgets_var2,width=240)
-        # w2 = Column(w1,Div(text="""<hr width=240px>"""),self.ui_elements["shift_button_group"],width=240)
         return w1
 
 
@@ -115,6 +107,66 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
                 else: 
                     new_entry_sum = 0
                     num_of_summands = 0
+        
+        result = pandas.DataFrame(segmented, columns=["segmented"], index=self.bloodtest_dates)
+        result.sort_index(inplace=True)
 
-        return pandas.DataFrame(segmented, columns=["segmented"], index=self.bloodtest_dates)
+        return result
 
+
+    def update_widgets(self):
+
+        self.ui_elements["select_variable1"].options = list(self.categories[self.ui_elements["select_category"].value])
+
+        if self.ui_elements["select_view"].value != 'None':
+            self.ui_elements["select_variable2"].options = list(self.views[self.ui_elements["select_view"].value])
+        else:
+            self.ui_elements["select_variable2"].options = ['None']
+
+        if self.ui_elements["select_variable1"].value not in self.categories[self.ui_elements["select_category"].value]:
+            self.ui_elements["select_variable1"].value = self.categories[self.ui_elements["select_category"].value][0]
+
+        if self.ui_elements["select_view"].value != 'None':
+            if self.ui_elements["select_variable2"].value not in self.views[self.ui_elements["select_view"].value]:
+                self.ui_elements["select_variable2"].value = self.views[self.ui_elements["select_view"].value].columns[0]
+            
+            
+    def update_data(self):
+
+        ## Updated column: if it already exists in the dictionary of the segmented data, use it. 
+        # Otherwise segment it and add it to the dictionary
+        d1_name = self.ui_elements["select_variable1"].value
+        if d1_name not in self.new_data.keys():
+            self.new_data[d1_name] = self.segment_dates(d1_name)
+
+        d1 = self.new_data[d1_name]["segmented"]
+
+        ## Update the data of the bloodtest biomarker
+        current_view = self.ui_elements["select_view"].value
+        if current_view != None:
+            biomarker_name = self.ui_elements["select_variable2"].value
+            d2 = self.views[current_view][biomarker_name].copy()
+
+        self.data_sources['raw_data'].data['y_values1'] = d1
+        self.data_sources['raw_data'].data['y_values2'] = d2
+
+
+    def update_plots(self):
+        super().update_plots()
+
+        if numpy.nanmax(self.data_sources['raw_data'].data['y_values2']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values2']):
+            self.plots['time_series'].extra_y_ranges['right'].start=numpy.nanmin(self.data_sources['raw_data'].data['y_values2'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
+            self.plots['time_series'].extra_y_ranges['right'].end=numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
+        else:
+            self.plots['time_series'].extra_y_ranges['right'].start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
+            self.plots['time_series'].extra_y_ranges['right'].end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
+
+        self.plots['time_series'].yaxis[0].axis_label = self.ui_elements["select_variable1"].value
+        self.plots['time_series'].yaxis[1].axis_label = self.ui_elements["select_variable2"].value
+
+        if numpy.nanmax(self.data_sources['raw_data'].data['y_values1']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values1']):    
+            self.plots['time_series'].y_range.start=numpy.nanmin(self.data_sources['raw_data'].data['y_values1'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))
+            self.plots['time_series'].y_range.end=numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))     
+        else:
+            self.plots['time_series'].y_range.start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
+            self.plots['time_series'].y_range.end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
