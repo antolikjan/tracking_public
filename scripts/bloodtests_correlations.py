@@ -1,6 +1,6 @@
 import numpy, pandas
 
-from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select
+from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select, Slider, Spacer
 from bokeh.plotting import figure
 from scripts.ui_framework.analysis_panel import AnalysisPanel
 
@@ -17,6 +17,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.register_widget(Select(title = 'Biomarker Name', options = list(views['WBC Rest']), value='Leukocites (G/L)'),'select_variable2',['value'])
 
         self.register_widget(Select(title="Weighted average",  options=['None','Gauss','PastGauss','FutureGauss'], value = 'None'),"select_filter1",['value'])
+        self.register_widget(Slider(start=10, end=300, value=30, step=1, title="Number of days to average variable 1 on"),"select_segmentation",['value'])
 
 
         self.views = views
@@ -30,7 +31,6 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
         self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : self.new_data['DistanceFitbit']["segmented"],'y_values2' : views['WBC Rest']['Leukocites (G/L)'] })
 
-        
 
         # PLOT 1
         range1_start = self.new_data['DistanceFitbit']['segmented'].min() - 0.1 * (self.new_data['DistanceFitbit']['segmented'].max() - self.new_data['DistanceFitbit']['segmented'].min())
@@ -62,53 +62,49 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         rt.overlay.fill_alpha = 0.2
 
         self.register_widget(rt.x_range, 'range_tool_x_range', ['start','end'])
+
             
 
     def compose_widgets(self):
         widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category"], self.ui_elements["select_variable1"],sizing_mode="fixed", width=120,height=500)
         widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""),self.ui_elements["select_view"], self.ui_elements["select_variable2"],sizing_mode="fixed", width=120,height=500)  
-        w1 = Row(widgets_var1,widgets_var2,width=240)
-        return w1
+        widgets_var3 = Column(Div(text="""<b>Choose a segmentation period</b>"""), self.ui_elements["select_segmentation"], sizing_mode="fixed", width=300,height=600)
+        w1 = Row(widgets_var1, Spacer(width=40, height=40), widgets_var2,width=240)
+        w2 = Column(w1,  widgets_var3)
+        return w2
 
 
     def compose_plots(self):
         return Row(self.plots['time_series'])
 
 
-
-    def segment_dates(self, column_to_align):
+    def segment_dates(self, column_to_align, segmentation_period=30):
         segmented = []
-        new_entry_sum = 0
-        num_of_summands = 0
-        date_index = 0
 
-        current_bloodtest_date = self.bloodtest_dates[date_index]
+        for date in self.bloodtest_dates:
 
-        for i in range(len(self.raw_data.index)):
-            date = self.raw_data.index[i]
-            if pandas.isna(current_bloodtest_date) or date <= current_bloodtest_date: 
-                if not pandas.isna(self.raw_data[column_to_align][i]):
-                    num_of_summands +=1
-                    new_entry_sum += self.raw_data[column_to_align][i]
-            else:
-                new_entry = new_entry_sum / num_of_summands if num_of_summands != 0 else 0
+            segment_start_date = date - pandas.Timedelta(days=segmentation_period)
+            segment_end_date = date
 
-                segmented.append(new_entry)
+            # filtering the given column based on the date range
+            slice_range = (self.raw_data[column_to_align].index >= segment_start_date) & (self.raw_data[column_to_align].index <= segment_end_date)
+            slice = self.raw_data[column_to_align][slice_range]
 
-                date_index += 1
-                if date_index == len(self.bloodtest_dates):
-                    break
-
-                current_bloodtest_date = self.bloodtest_dates[date_index]
-
-                if not pandas.isna(self.raw_data[column_to_align][i]):
-                    new_entry_sum = self.raw_data[column_to_align][i]
-                    num_of_summands = 1
-                else: 
-                    new_entry_sum = 0
-                    num_of_summands = 0
+            # adding the slice to the list of segments
+            segmented.append(slice)
         
-        result = pandas.DataFrame(segmented, columns=["segmented"], index=self.bloodtest_dates)
+        segmented_averages = self.average_of_segment(segmented)
+
+        return segmented_averages
+
+    def average_of_segment(self, segment):
+        averages = []
+
+        for slice_df in segment:
+            slice_averages = slice_df.mean()
+            averages.append(slice_averages)
+
+        result = pandas.DataFrame(averages, columns=["segmented"], index=self.bloodtest_dates)
         result.sort_index(inplace=True)
 
         return result
@@ -132,16 +128,12 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             
             
     def update_data(self):
-
-        ## Updated column: if it already exists in the dictionary of the segmented data, use it. 
-        # Otherwise segment it and add it to the dictionary
+        
+        ## Update the data of variable 1, depending on the days (prior to the date of var2) it should be averaged over
         d1_name = self.ui_elements["select_variable1"].value
-        if d1_name not in self.new_data.keys():
-            self.new_data[d1_name] = self.segment_dates(d1_name)
+        d1 = self.segment_dates(d1_name, self.ui_elements["select_segmentation"].value)["segmented"]
 
-        d1 = self.new_data[d1_name]["segmented"]
-
-        ## Update the data of the bloodtest biomarker
+        ## Update the data of the bloodtest biomarker (var2)
         current_view = self.ui_elements["select_view"].value
         if current_view != None:
             biomarker_name = self.ui_elements["select_variable2"].value
