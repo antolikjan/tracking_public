@@ -1,3 +1,4 @@
+from turtle import width
 import numpy, pandas
 
 from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select, Slider, Spacer
@@ -16,7 +17,6 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.register_widget(Select(title="View",  options=list(views.keys()), value = 'WBC Rest'),'select_view',['value'])
         self.register_widget(Select(title = 'Biomarker Name', options = list(views['WBC Rest']), value='Leukocites (G/L)'),'select_variable2',['value'])
 
-        self.register_widget(Select(title="Weighted average",  options=['None','Gauss','PastGauss','FutureGauss'], value = 'None'),"select_filter1",['value'])
         self.register_widget(Slider(start=10, end=300, value=30, step=1, title="Number of days to average variable 1 on"),"select_segmentation",['value'])
 
 
@@ -66,16 +66,27 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             
 
     def compose_widgets(self):
-        widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category"], self.ui_elements["select_variable1"],sizing_mode="fixed", width=120,height=500)
-        widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""),self.ui_elements["select_view"], self.ui_elements["select_variable2"],sizing_mode="fixed", width=120,height=500)  
-        widgets_var3 = Column(Div(text="""<b>Choose a segmentation period</b>"""), self.ui_elements["select_segmentation"], sizing_mode="fixed", width=300,height=600)
-        w1 = Row(widgets_var1, Spacer(width=40, height=40), widgets_var2,width=240)
-        w2 = Column(w1,  widgets_var3)
-        return w2
+        spacer1 = Spacer(width = 260, height=90)
+        widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""), self.ui_elements["select_category"], self.ui_elements["select_variable1"], sizing_mode="fixed", width=120, height=500)
+        widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""), self.ui_elements["select_view"], self.ui_elements["select_variable2"], sizing_mode="fixed", width=120, height=500)
+        spacer2 = Spacer(width=20, height=40)
+        widgets_var3 = Column(Div(text="""<b>Segmentation Range</b>"""), self.ui_elements["select_segmentation"], sizing_mode="fixed", width=260, height=500)
+        spacer3 = Spacer(width=40, height=70)
+        horiz_spacer = Spacer(width = 20)
+
+        layout_top = Row(horiz_spacer, widgets_var1, spacer2, widgets_var2, width=480)
+        layout_bottom = Row(horiz_spacer, widgets_var3)
+
+        layout = Column(spacer1, layout_top, spacer3, layout_bottom)
+        
+        return layout
+    
 
 
     def compose_plots(self):
-        return Row(self.plots['time_series'])
+        vertical_spacer = Spacer(width = 260, height=70)
+        horiz_spacer = Spacer(width = 40)
+        return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200)))
 
 
     def segment_dates(self, column_to_align, segmentation_period=30):
