@@ -24,19 +24,20 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.bloodtest_dates = views['WBC Rest'].index
 
         # Populating segmented data
-        segmented_data = self.segment_dates('DistanceFitbit')
+        segmented_data = self.segment_dates('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
         self.new_data = {}
         self.new_data['DistanceFitbit'] = segmented_data
 
-
-        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : self.new_data['DistanceFitbit']["segmented"],'y_values2' : views['WBC Rest']['Leukocites (G/L)'] })
+        # y_values1 = numpy.nan_to_num(self.data_sources['raw_data'].data['y_values1'])
+        # self.plots['time_series'].y_range.start = numpy.nanmin(y_values1) - 0.1 * (numpy.nanmax(y_values1) - numpy.nanmin(y_values1))
+        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"]),'y_values2' : numpy.nan_to_num(views['WBC Rest']['Leukocites (G/L)']) })
 
 
         # PLOT 1
-        range1_start = self.new_data['DistanceFitbit']['segmented'].min() - 0.1 * (self.new_data['DistanceFitbit']['segmented'].max() - self.new_data['DistanceFitbit']['segmented'].min())
-        range1_end = self.new_data['DistanceFitbit']['segmented'].max() + 0.1 * (self.new_data['DistanceFitbit']['segmented'].max() - self.new_data['DistanceFitbit']['segmented'].min())
-        range2_start = views['WBC Rest']['Leukocites (G/L)'].min()-0.1*(views['WBC Rest']['Leukocites (G/L)'].max()-views['WBC Rest']['Leukocites (G/L)'].min())
-        range2_end = views['WBC Rest']['Leukocites (G/L)'].max()+0.1*(views['WBC Rest']['Leukocites (G/L)'].max()-views['WBC Rest']['Leukocites (G/L)'].min())
+        range1_start = numpy.nanmin(self.new_data['DistanceFitbit']['segmented']) - 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
+        range1_end = numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) + 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
+        range2_start = numpy.nanmin(views['WBC Rest']['Leukocites (G/L)'])-0.1*(numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])-numpy.nanmin(views['WBC Rest']['Leukocites (G/L)']))
+        range2_end = numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])+0.1*(numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])-numpy.nanmin(views['WBC Rest']['Leukocites (G/L)']))
 
 
         p1 = figure(width=300, height=320, sizing_mode="stretch_both", x_axis_type='datetime',
@@ -89,20 +90,33 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200)))
 
 
-    def segment_dates(self, column_to_align, segmentation_period=30):
+    def temp(self):
+        for i in range(26):
+            entry = self.views["Immunity"]["IgM (g/l)"][i]
+            print(entry)
+
+            print(f'now check if its nan: {pandas.isna(entry)}')
+
+    def segment_dates(self, column_to_align, curr_view, biomarker, segmentation_period=30):
         segmented = []
 
-        for date in self.bloodtest_dates:
+        for i in range(len(self.bloodtest_dates)):
+            date = self.bloodtest_dates[i]
+            biomarker_entry = self.views[curr_view][biomarker][i]
+            if pandas.isna(biomarker_entry):
+                # print(f'@@@@@@@@@@@@@@@@@@@@@ {biomarker} is empty at date: {date} - {numpy.dtype(biomarker_entry)}')
+                segmented.append(0)
+            else:
 
-            segment_start_date = date - pandas.Timedelta(days=segmentation_period)
-            segment_end_date = date
+                segment_start_date = date - pandas.Timedelta(days=segmentation_period)
+                segment_end_date = date
 
-            # filtering the given column based on the date range
-            slice_range = (self.raw_data[column_to_align].index >= segment_start_date) & (self.raw_data[column_to_align].index <= segment_end_date)
-            slice = self.raw_data[column_to_align][slice_range]
+                # filtering the given column based on the date range
+                slice_range = (self.raw_data[column_to_align].index >= segment_start_date) & (self.raw_data[column_to_align].index <= segment_end_date)
+                slice = self.raw_data[column_to_align][slice_range]
 
-            # adding the slice to the list of segments
-            segmented.append(slice)
+                # adding the slice to the list of segments
+                segmented.append(slice)
         
         segmented_averages = self.average_of_segment(segmented)
 
@@ -112,8 +126,11 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         averages = []
 
         for slice_df in segment:
-            slice_averages = slice_df.mean()
-            averages.append(slice_averages)
+            if type(slice_df) == int and slice_df==0:
+                averages.append(0)
+            else:
+                slice_averages = slice_df.mean()
+                averages.append(slice_averages)
 
         result = pandas.DataFrame(averages, columns=["segmented"], index=self.bloodtest_dates)
         result.sort_index(inplace=True)
@@ -139,19 +156,20 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             
             
     def update_data(self):
-        
-        ## Update the data of variable 1, depending on the days (prior to the date of var2) it should be averaged over
-        d1_name = self.ui_elements["select_variable1"].value
-        d1 = self.segment_dates(d1_name, self.ui_elements["select_segmentation"].value)["segmented"]
-
         ## Update the data of the bloodtest biomarker (var2)
         current_view = self.ui_elements["select_view"].value
         if current_view != None:
-            biomarker_name = self.ui_elements["select_variable2"].value
-            d2 = self.views[current_view][biomarker_name].copy()
+            var2_name = self.ui_elements["select_variable2"].value
+            var2 = self.views[current_view][var2_name].copy()
+        
 
-        self.data_sources['raw_data'].data['y_values1'] = d1
-        self.data_sources['raw_data'].data['y_values2'] = d2
+        ## Update the data of variable 1, depending on var2 and the days (prior to the date of var2) it should be averaged over
+        var1_name = self.ui_elements["select_variable1"].value
+        var1 = self.segment_dates(var1_name, current_view, var2_name, self.ui_elements["select_segmentation"].value)["segmented"]
+
+
+        self.data_sources['raw_data'].data['y_values1'] = var1
+        self.data_sources['raw_data'].data['y_values2'] = var2
 
 
     def update_plots(self):
