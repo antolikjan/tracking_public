@@ -1,10 +1,10 @@
-from turtle import width
-import numpy, pandas
+import numpy, pandas, scipy
 
-from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select, Slider, Spacer
+from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select, Slider, Spacer, Slope
 from bokeh.plotting import figure
-from scripts.ui_framework.analysis_panel import AnalysisPanel
 
+from scripts.ui_framework.analysis_panel import AnalysisPanel
+from scripts.data import data_aquisition_overlap_non_nans
 
 
 class BloodTestsCorrelationsPanel(AnalysisPanel):
@@ -23,21 +23,21 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.views = views
         self.bloodtest_dates = views['WBC Rest'].index
 
-        # Populating segmented data
-        segmented_data = self.segment_dates('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
+        v1_segmented, v2_filtered,  = self.segment_and_filter_redundant_data('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
+
         self.new_data = {}
-        self.new_data['DistanceFitbit'] = segmented_data
+        self.new_data['DistanceFitbit'] = v1_segmented
 
-        # y_values1 = numpy.nan_to_num(self.data_sources['raw_data'].data['y_values1'])
-        # self.plots['time_series'].y_range.start = numpy.nanmin(y_values1) - 0.1 * (numpy.nanmax(y_values1) - numpy.nanmin(y_values1))
-        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"]),'y_values2' : numpy.nan_to_num(views['WBC Rest']['Leukocites (G/L)']) })
 
+        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"]),'y_values2' : numpy.nan_to_num(v2_filtered) })
+        self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : numpy.nan_to_num(v2_filtered),'y_values' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"])})
+        self.data_sources['source_corr_mean'] = ColumnDataSource(data={'x_values' : [],'y_values' : [], 'sem-' : [], 'sem+' : []})
 
         # PLOT 1
         range1_start = numpy.nanmin(self.new_data['DistanceFitbit']['segmented']) - 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
         range1_end = numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) + 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
-        range2_start = numpy.nanmin(views['WBC Rest']['Leukocites (G/L)'])-0.1*(numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])-numpy.nanmin(views['WBC Rest']['Leukocites (G/L)']))
-        range2_end = numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])+0.1*(numpy.nanmax(views['WBC Rest']['Leukocites (G/L)'])-numpy.nanmin(views['WBC Rest']['Leukocites (G/L)']))
+        range2_start = numpy.nanmin(v2_filtered)-0.1*(numpy.nanmax(v2_filtered)-numpy.nanmin(v2_filtered))
+        range2_end = numpy.nanmax(v2_filtered)+0.1*(numpy.nanmax(v2_filtered)-numpy.nanmin(v2_filtered))
 
 
         p1 = figure(width=300, height=320, sizing_mode="stretch_both", x_axis_type='datetime',
@@ -49,8 +49,6 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         p1.add_layout(LinearAxis(y_range_name="right"), 'right')
         self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
         self.plots['circles2'] = p1.circle(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
-        # self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False, width = 2)
-        # self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
         p1.yaxis[0].major_label_text_color = "navy"
         p1.yaxis[1].major_label_text_color = "green"
         p1.yaxis[0].axis_label = "DistanceFitbit"
@@ -61,9 +59,21 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         rt = RangeTool(x_range=p1.x_range)
         rt.overlay.fill_color = "navy"
         rt.overlay.fill_alpha = 0.2
-
         self.register_widget(rt.x_range, 'range_tool_x_range', ['start','end'])
 
+        
+        # PLOT 2
+        p2 = figure(width=300,height=300,sizing_mode="stretch_both",title='')
+        p2.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
+        p2.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
+        p2.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
+        p2.xaxis.axis_label = "DistanceFitbit"
+        p2.yaxis.axis_label = "Leukocites"
+        p2.toolbar_location = None
+        p2_slope = Slope(gradient=0, y_intercept=0, line_color='orange', line_dash='dashed', line_width=3.5)
+        p2.add_layout(p2_slope) 
+        self.plots['correlations'] = p2
+        self.plots['correlations_slope'] = p2_slope 
             
 
     def compose_widgets(self):
@@ -85,57 +95,57 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
 
     def compose_plots(self):
-        vertical_spacer = Spacer(width = 260, height=70)
+        vertical_spacer = Spacer(width = 260, height=10)
         horiz_spacer = Spacer(width = 40)
-        return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200)))
+        return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200), Row(horiz_spacer, self.plots["correlations"], width=1150), sizing_mode='stretch_both'))
 
 
-    def temp(self):
-        for i in range(26):
-            entry = self.views["Immunity"]["IgM (g/l)"][i]
-            print(entry)
 
-            print(f'now check if its nan: {pandas.isna(entry)}')
+    def segment_and_filter_redundant_data(self, column_to_align, curr_view, biomarker, segmentation_period=30):
 
-    def segment_dates(self, column_to_align, curr_view, biomarker, segmentation_period=30):
         segmented = []
+        v2_filtered = self.views[curr_view][biomarker].copy()
 
         for i in range(len(self.bloodtest_dates)):
             date = self.bloodtest_dates[i]
-            biomarker_entry = self.views[curr_view][biomarker][i]
-            if pandas.isna(biomarker_entry):
-                # print(f'@@@@@@@@@@@@@@@@@@@@@ {biomarker} is empty at date: {date} - {numpy.dtype(biomarker_entry)}')
-                segmented.append(0)
-            else:
+            biomarker_entry = v2_filtered[i]
 
+            # making sure that we only include dates for which both variables have non-NaN datapoints 
+            if pandas.isna(biomarker_entry):
+                segmented.append(pandas.NA)
+
+            else:
                 segment_start_date = date - pandas.Timedelta(days=segmentation_period)
                 segment_end_date = date
 
-                # filtering the given column based on the date range
                 slice_range = (self.raw_data[column_to_align].index >= segment_start_date) & (self.raw_data[column_to_align].index <= segment_end_date)
                 slice = self.raw_data[column_to_align][slice_range]
 
                 # adding the slice to the list of segments
                 segmented.append(slice)
         
-        segmented_averages = self.average_of_segment(segmented)
 
-        return segmented_averages
-
-    def average_of_segment(self, segment):
+        # calculating averages of the slices of the segmented array
         averages = []
-
-        for slice_df in segment:
-            if type(slice_df) == int and slice_df==0:
-                averages.append(0)
-            else:
+        for j in range(len(segmented)):
+            slice_df = segmented[j]
+            try:
                 slice_averages = slice_df.mean()
-                averages.append(slice_averages)
+            except:     # slice is a (collection of) NaN value(s)
+                slice_averages = numpy.nan
 
-        result = pandas.DataFrame(averages, columns=["segmented"], index=self.bloodtest_dates)
-        result.sort_index(inplace=True)
+            # including only dates for which both variables have non-NaN datapoints 
+            if pandas.isna(slice_averages):
+                v2_filtered.iloc[j] = pandas.NA
 
-        return result
+            averages.append(slice_averages)
+        
+        v1_segmented = pandas.DataFrame(averages, columns=["segmented"], index=self.bloodtest_dates)
+        v1_segmented.sort_index(inplace=True)
+
+        
+
+        return v1_segmented, v2_filtered
 
 
     def update_widgets(self):
@@ -156,38 +166,86 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             
             
     def update_data(self):
-        ## Update the data of the bloodtest biomarker (var2)
+        ## Update name of the bloodtest biomarker (var2)
         current_view = self.ui_elements["select_view"].value
         if current_view != None:
             var2_name = self.ui_elements["select_variable2"].value
-            var2 = self.views[current_view][var2_name].copy()
-        
 
-        ## Update the data of variable 1, depending on var2 and the days (prior to the date of var2) it should be averaged over
+        ## Update the data of variable 1 and variable 2 
         var1_name = self.ui_elements["select_variable1"].value
-        var1 = self.segment_dates(var1_name, current_view, var2_name, self.ui_elements["select_segmentation"].value)["segmented"]
-
+        df_var1, var2 = self.segment_and_filter_redundant_data(var1_name, current_view, var2_name, self.ui_elements["select_segmentation"].value)
+        var1 = df_var1["segmented"]
 
         self.data_sources['raw_data'].data['y_values1'] = var1
         self.data_sources['raw_data'].data['y_values2'] = var2
 
 
+        var1_array = var1.to_numpy().flatten()
+
+        # Check that variables are not all NaN value columns
+        if not var1.isna().all() and not var2.isna().all():
+
+            nan_mask = ~numpy.isnan(var1_array) & ~numpy.isnan(var2) # a mask to filter out NaN values
+            var1_filtered = var1_array[nan_mask]
+            var2_filtered = var2[nan_mask]
+
+            self.data_sources['source_corr'].data = {'x_values' : var1 , 'y_values' : var2}
+            m, bins, _ = scipy.stats.binned_statistic(var1_filtered, var2_filtered, statistic='mean', bins=min(20,len(set(var1_filtered))))
+            std, bins, _ = scipy.stats.binned_statistic(var1_filtered, var2_filtered, statistic='std', bins=min(20,len(set(var1_filtered))))
+            count, bins, _ = scipy.stats.binned_statistic(var1_filtered, var2_filtered, statistic='count', bins=min(20,len(set(var1_filtered))))
+
+            sem = std/numpy.sqrt(len(count)-1)
+            x = bins[:-1] + (bins[1:] - bins[:-1])/2.0
+
+            self.data_sources['source_corr_mean'].data = {'x_values' : x , 'y_values' : m, 'sem+' : m+sem, 'sem-' : m-sem}
+
     def update_plots(self):
         super().update_plots()
 
-        if numpy.nanmax(self.data_sources['raw_data'].data['y_values2']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values2']):
-            self.plots['time_series'].extra_y_ranges['right'].start=numpy.nanmin(self.data_sources['raw_data'].data['y_values2'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
-            self.plots['time_series'].extra_y_ranges['right'].end=numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
-        else:
-            self.plots['time_series'].extra_y_ranges['right'].start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
-            self.plots['time_series'].extra_y_ranges['right'].end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
+        # Check that the data is not empty
+        if not self.data_sources['raw_data'].data['y_values2'].isna().all() and not self.data_sources['raw_data'].data['y_values1'].isna().all():
+            if numpy.nanmax(self.data_sources['raw_data'].data['y_values2']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values2']):
+                self.plots['time_series'].extra_y_ranges['right'].start=numpy.nanmin(self.data_sources['raw_data'].data['y_values2'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
+                self.plots['time_series'].extra_y_ranges['right'].end=numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values2']))
+            else:
+                self.plots['time_series'].extra_y_ranges['right'].start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
+                self.plots['time_series'].extra_y_ranges['right'].end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values2'])
 
-        self.plots['time_series'].yaxis[0].axis_label = self.ui_elements["select_variable1"].value
-        self.plots['time_series'].yaxis[1].axis_label = self.ui_elements["select_variable2"].value
+            self.plots['time_series'].yaxis[0].axis_label = self.ui_elements["select_variable1"].value
+            self.plots['time_series'].yaxis[1].axis_label = self.ui_elements["select_variable2"].value
 
-        if numpy.nanmax(self.data_sources['raw_data'].data['y_values1']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values1']):    
-            self.plots['time_series'].y_range.start=numpy.nanmin(self.data_sources['raw_data'].data['y_values1'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))
-            self.plots['time_series'].y_range.end=numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))     
+            if numpy.nanmax(self.data_sources['raw_data'].data['y_values1']) != numpy.nanmin(self.data_sources['raw_data'].data['y_values1']):    
+                self.plots['time_series'].y_range.start=numpy.nanmin(self.data_sources['raw_data'].data['y_values1'])-0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))
+                self.plots['time_series'].y_range.end=numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])+0.1*(numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])-numpy.nanmin(self.data_sources['raw_data'].data['y_values1']))     
+            else:
+                self.plots['time_series'].y_range.start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
+                self.plots['time_series'].y_range.end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
+
+           
         else:
-            self.plots['time_series'].y_range.start = 0.9 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
-            self.plots['time_series'].y_range.end = 1.1 * numpy.nanmax(self.data_sources['raw_data'].data['y_values1'])
+            # Clear the data in the plot, effectively showing an empty plot
+            self.plots['time_series'].extra_y_ranges['right'].start = 0
+            self.plots['time_series'].extra_y_ranges['right'].end = 0
+            self.plots['time_series'].y_range.start = 0
+            self.plots['time_series'].y_range.end = 0
+
+            self.plots['time_series'].yaxis[0].axis_label = self.ui_elements["select_variable1"].value
+            self.plots['time_series'].yaxis[1].axis_label = self.ui_elements["select_variable2"].value
+
+
+        # we will not report correlations if they are not calculated from at least 10 data points
+        x,y = data_aquisition_overlap_non_nans(self.data_sources['source_corr'].data['x_values'],self.data_sources['source_corr'].data['y_values'])
+        if len(x) > 10:
+            res = scipy.stats.linregress(x,y) 
+            if not numpy.isnan(res.slope):
+                self.plots['correlations_slope'].gradient = res.slope
+                self.plots['correlations_slope'].y_intercept = res.intercept
+                self.plots['correlations'].title.text = 'R=' +str(res.rvalue) + ';              (p=' + "{0:.6g}".format(res.pvalue) + '; N=' + "{0:.6g}".format(len(self.data_sources['source_corr'].data['x_values'])) + ')'
+                self.plots['correlations_slope'].visible = True
+            else:
+                self.plots['correlations_slope'].visible = False
+                self.plots['correlations'].title.text = 'R: N/A      p_value: N/A'
+
+        else:
+            self.plots['correlations_slope'].visible = False
+            self.plots['correlations'].title.text = 'R: N/A      p_value: N/A'
