@@ -1,11 +1,10 @@
 import pandas as pd
-from scripts.airtable import airtable_download , convert_to_dataframe
 import numpy
 import numpy.ma
 import pickle
 import math
 from functools import partial
-
+from pyairtable import Table
 
 def load_tables(table_names,api_key,base_id,cache=False):
     """
@@ -15,8 +14,9 @@ def load_tables(table_names,api_key,base_id,cache=False):
     if not cache:
         tables = []
         for tn in table_names:
+            table = Table(api_key, base_id,tn)
             print(tn)
-            df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
+            df = convert_to_dataframe(table.all(),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
             tables.append(df)
@@ -32,12 +32,13 @@ def load_tables(table_names,api_key,base_id,cache=False):
             assert (df.index[i] + pd.offsets.Day()) == df.index[i+1], "Error, no gaps in data allowed. The following consecutive data points are not a day apart: %s %s" % (str(df.index[i]),str(df.index[i+1]))
 
         # let's load up the metadata
-        md = convert_to_dataframe(airtable_download('Metadata',api_key='keyCkIHRFu2ey2pnK',base_id='appIRvcTRGQflKWqD'),index_column="Name")
+        metadata_table = Table(api_key, base_id,'Metadata')
+        md = convert_to_dataframe(metadata_table.all(),index_column="Name")
         md['Start of valid records'] = pd.to_datetime(md['Start of valid records'])
+        md['Ignore'] = numpy.nan_to_num(pd.to_numeric(md['Ignore']))
 
         # convert bool columns to float
         for col in df.columns:
-            print(col)
             if md['Units'].loc[col] == 'bool':
                df[col] = pd.to_numeric(df[col])
 
@@ -77,7 +78,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
         #                    assert False , "%s in column %s doesn't follow hh:mm format" % (s,col)
         #                 s = int(s.split(":")[0])*60+int(s.split(":")[1])
         #            return s
-
         #        df[col] = df[col].apply(hhmm_to_min)
 
         # Somtimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
@@ -88,14 +88,25 @@ def load_tables(table_names,api_key,base_id,cache=False):
                 else:
                     return s
             df[col] = df[col].apply(nandict_to_nan)
-    
 
-        # replace NaN with default values if they are specified, but only fter 'Start of valid records'
+        # remove columns that are strings or to be ignored
+        to_be_droped=[]
+        for col in df.columns:
+            if md['Units'].loc[col] == 'string' or md['Ignore'].loc[col]==1:
+               to_be_droped.append(col)
+        
+        print("Number of columns before cleaning:" + str(len(df.columns)))
+        df = df.drop(to_be_droped,axis=1)
+        print("Number of columns after cleaning:" + str(len(df.columns)))
+        
+        # replace NaN with default values if they are specified, but only after 'Start of valid records'
         for col in df.columns:
             if md['Units'].loc[col] != 'string':
                 df[col] = numpy.nan_to_num(df[col].to_numpy(float,na_value=numpy.nan),md['Default'].loc[col]) if not math.isnan(md['Default'].loc[col]) else df[col].to_numpy(float,na_value=numpy.nan)
                 if not pd.isnull(md['Start of valid records'].loc[col]):
                    df.loc[:md['Start of valid records'].loc[col],col] = numpy.nan
+                if not pd.isnull(md['End of valid records'].loc[col]):
+                   df.loc[md['End of valid records'].loc[col]:,col] = numpy.nan
 
         # cache the data
         pickle.dump((df,md),open('./locals/cache.pickle','bw'))
@@ -106,30 +117,33 @@ def load_tables(table_names,api_key,base_id,cache=False):
     #
     categories = {}
     for category in table_names:
-        categories[category] = md.loc[md['Category'] == category].index.tolist()
+        categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
 
     return df,md,categories
 
-def load_PANAS_tables(api_key,base_id):
-    tables = []
-    for tn in ['PANAS20morning','PANAS20lunchtime','PANAS20afternoon','PANAS20evening']:
-            df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
-            df.sort_index(inplace=True)
-            df.drop(df.index[:1], inplace=True)
-            tables.append(df)
+#def load_PANAS_tables(api_key,base_id):
+#    tables = []
+#    for tn in ['PANAS20morning','PANAS20lunchtime','PANAS20afternoon','PANAS20evening']:
+#            df = convert_to_dataframe(airtable_download(tn,api_key=api_key,base_id=base_id),index_column="Date",datatime_index=True)
+#            df.sort_index(inplace=True)
+#            df.drop(df.index[:1], inplace=True)
+#            tables.append(df)
+#
+#    pe = sum([df['Positive Effects'] for df in tables])/4
+#    ne = sum([df['Negative Effects'] for df in tables])/4
 
-    pe = sum([df['Positive Effects'] for df in tables])/4
-    ne = sum([df['Negative Effects'] for df in tables])/4
-    
-    
+def load_blood_tests(api_key,base_id,cache=False):
+    table = Table(api_key, base_id, 'BloodTest')
 
-def load_blood_tests(view_names,api_key,base_id,cache=False):
+    views = {
+        "Cardio" : ["Troponin_hs (ng/l)","LP-PLA2 (U/I)"]
+    }
+
     if not cache:
-
         blood_tests = {}
-        for view in view_names:
-            blood_tests[view] = convert_to_dataframe(airtable_download('BloodTest',api_key=base_key,base_id=base_id,params_dict = {'view' : view}), index_column="Date",datatime_index=True)
-        
+        for view in views:
+            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]), index_column="Date",datatime_index=True)
+            print(blood_tests[view].columns)
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
     else:
@@ -247,3 +261,21 @@ def event_triggered_change(veca,vecb,w,default=0):
     return res, stat, pvalue
 
 categories = {}
+
+def convert_to_dataframe(airtable_records,index_column=None,datatime_index=False):
+    """Converts dictionary output from airtable_download() into a Pandas dataframe."""
+    airtable_rows = []
+    airtable_index = []
+    for record in airtable_records:
+        if index_column != None:
+            if datatime_index:
+                 airtable_index.append(pd.to_datetime(record['fields'][index_column]))
+            else:
+                airtable_index.append(record['fields'][index_column])
+            record['fields'].pop(index_column)
+        else:
+            airtable_index.append(record['id'])
+        airtable_rows.append(record['fields'])
+        
+    airtable_dataframe = pd.DataFrame(airtable_rows, index=airtable_index)
+    return airtable_dataframe

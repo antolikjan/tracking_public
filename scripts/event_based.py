@@ -1,4 +1,4 @@
-from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Panel, Span, FactorRange, LabelSet
+from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Span, FactorRange, LabelSet
 from bokeh.transform import factor_cmap
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
