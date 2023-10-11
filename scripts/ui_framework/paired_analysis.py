@@ -24,7 +24,7 @@ class PairedAnalysis(AnalysisPanel):
           self.register_widget(RadioButtonGroup(labels=["Var2 -> Var1","no shift","Var1 -> Var2"], active=1),'shift_button_group',['active'])
 
           ### DATA
-          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['DistanceFitbit'],'y_values2' : data['RHR'],'y_values_filtered' : data['DistanceFitbit'],'y_values_filtered' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
+          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['DistanceFitbit'],'y_values2' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
 
       def compose_widgets(self):
           widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category1"], self.ui_elements["select_variable1"],self.ui_elements["select_filter1"],self.ui_elements["select_sigma1"],sizing_mode="fixed", width=120,height=500)

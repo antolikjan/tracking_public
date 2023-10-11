@@ -91,6 +91,9 @@ def load_tables(table_names,api_key,base_id,cache=False):
                     return s
             df[col] = df[col].apply(nandict_to_nan)
 
+        # apply additional custom preprocessing
+        special_preprocessing_rules(df,md)
+
         # remove columns that are strings or to be ignored
         to_be_droped=[]
         for col in df.columns:
@@ -120,7 +123,21 @@ def load_tables(table_names,api_key,base_id,cache=False):
     for category in table_names:
         categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
 
+
     return df,md,categories
+
+def special_preprocessing_rules(df,md):
+    
+    # FITIBIT - correct data on days when it wasn't worn
+    # If you don't wear fitibit on the given day it still stores 0 as number of steps and some other metrics that bias the data
+    # Replace all Fitbit table rows with 0 if number of steps is less than 500 (which most likely means I didn't wear fitbit on that day)
+    for index, row in df.iterrows():
+        if row['Steps'] < 500:
+            for col in df.columns:
+                if md['Category'].loc[col] == 'Fitbit':
+                   df.at[index,col] = numpy.nan
+
+    return df
 
 #def load_PANAS_tables(api_key,base_id):
 #    tables = []

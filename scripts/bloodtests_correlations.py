@@ -3,9 +3,6 @@ import numpy, pandas
 from bokeh.models import ColumnDataSource, Column, Row, Range1d, Div, LinearAxis, RangeTool, Select
 from bokeh.plotting import figure
 from scripts.ui_framework.analysis_panel import AnalysisPanel
-
-
-
 class BloodTestsCorrelationsPanel(AnalysisPanel):
     def __init__(self, data, views, categories, metadata, title):
         AnalysisPanel.__init__(self,data,categories,metadata,title)
