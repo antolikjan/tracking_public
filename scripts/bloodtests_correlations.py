@@ -23,7 +23,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.views = views
         self.bloodtest_dates = views['WBC Rest'].index
 
-        v1_segmented, v2_filtered,  = self.segment_and_filter_redundant_data('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
+        v1_segmented, v2_filtered = self.segment_and_filter_redundant_data('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
 
         self.new_data = {}
         self.new_data['DistanceFitbit'] = v1_segmented
@@ -41,7 +41,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
 
         p1 = figure(width=300, height=320, sizing_mode="stretch_both", x_axis_type='datetime',
-            y_range=(range1_start, range1_end), x_axis_location="above", tools="xpan",
+            y_range=(range1_start, range1_end),  tools="xpan",
             x_range=(self.new_data['DistanceFitbit'].index[1].timestamp()*1000,
                     self.new_data['DistanceFitbit'].index[-1].timestamp()*1000))
 
@@ -91,13 +91,13 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         layout = Column(spacer1, layout_top, spacer3, layout_bottom)
         
         return layout
-    
+
 
 
     def compose_plots(self):
-        vertical_spacer = Spacer(width = 260, height=10)
-        horiz_spacer = Spacer(width = 40)
-        return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200), Row(horiz_spacer, self.plots["correlations"], width=1150), sizing_mode='stretch_both'))
+        vertical_spacer = Spacer(width = 100, height=10)
+        horiz_spacer = Spacer(width = 20)
+        return Row(Column(vertical_spacer, Row(horiz_spacer, self.plots['time_series'], width=1200), Row(horiz_spacer, self.plots["correlations"], width=1150),   sizing_mode='stretch_both'), sizing_mode='scale_width')
 
 
 
