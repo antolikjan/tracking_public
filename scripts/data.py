@@ -41,6 +41,8 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         # convert bool columns to float
         for col in df.columns:
+            print(col)
+            print(md['Units'].loc[col])
             if md['Units'].loc[col] == 'bool':
                 df[col] = pd.to_numeric(df[col])
 

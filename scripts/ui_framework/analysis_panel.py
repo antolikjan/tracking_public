@@ -78,15 +78,9 @@ class AnalysisPanel():
 
 
       def update(self,attr,old,new):
-          print('Update: ')
-          print(attr)
-          print(old)
-          print(new)
-          print('-----------------')
           self.update_widgets()        
           self.update_data()        
           self.update_plots()
-          print('Finished')
 
       def register_widget(self,widget,widget_name,actions_to_respond_to):
           """
