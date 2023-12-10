@@ -1,13 +1,14 @@
 from functools import partial
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, Panel
-from scripts.data import both_valid, data_aquisition_overlap_non_nans
+from scripts.data import both_valid, data_aquisition_overlap_non_nans, accumulation_analysis
 import scipy.stats
 import numpy
 import scripts.create_app
 import scripts.comparison
 from datetime import datetime
 from datetime import date
+from scripts.data import filter_data
 
 ui = {}
 
@@ -23,6 +24,11 @@ rs_nosh = []
 pvals_v1_pr_v2 = []
 pvals_v2_pr_v1 = []
 pvals_nosh = []
+
+acc_p = []
+acc_r = []
+acc_dir = []
+acc_sigma = []
 
 
 data_table = None
@@ -41,8 +47,15 @@ def correlation_analysis(data,metadata,source,relationships):
     pvals_v2_pr_v1.clear()
     pvals_nosh.clear()
 
+    acc_p.clear()
+    acc_r.clear()
+    acc_dir.clear()
+    acc_sigma.clear()
+
+
     cols = list(data.columns)    
     print("Number of columns in the dataset: " + str(len(cols)))
+
     selected_range = numpy.logical_and(data.index >= datetime.strptime(ui['dt_pckr_start'].value,"%Y-%m-%d"),data.index <= datetime.strptime(ui['dt_pckr_end'].value,"%Y-%m-%d")) 
 
     for i in range(len(cols)):
@@ -52,7 +65,6 @@ def correlation_analysis(data,metadata,source,relationships):
             if metadata['Units'].loc[cols[i]] != 'string' and metadata['Units'].loc[cols[j]] != 'string':
 
                     # let's calculate the correlations only for positions where both values are defined and 
-                    # for the three regressions corresponding to -1, 1 and 0 day shifts, we will report only the one with the lowest p-value
 
                     d1,d2 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy(),data[cols[j]][selected_range].to_numpy())
                     d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy()[1:],data[cols[j]][selected_range].to_numpy()[:-1])
@@ -115,6 +127,16 @@ def correlation_analysis(data,metadata,source,relationships):
                        val2.append(cols[j])
                        rs.append(res.rvalue)
                        pvals.append(res.pvalue)
+                    
+                    # now lets the accumulation analysis
+                    (best_p,best_r,best_sigma,best_dir) = accumulation_analysis(data[cols[i]][selected_range].to_numpy(),data[cols[j]][selected_range].to_numpy())
+                    acc_p.append(best_p)
+                    acc_r.append(best_r)
+                    acc_sigma.append(best_sigma)
+                    acc_dir.append(best_dir)
+
+
+
 
     set_table(None,None,None,source,relationships)
 
@@ -153,6 +175,10 @@ def set_table(attr, old, new, source,relationships):
                        'p_no_v1_to_v2' : numpy.nan_to_num(pvals_v1_pr_v2)[select], 
                        'r_no_v2_to_v1' : numpy.nan_to_num(rs_v2_pr_v1)[select], 
                        'p_no_v2_to_v1' : numpy.nan_to_num(pvals_v2_pr_v1)[select], 
+                       'Accumulation analysis P' : numpy.nan_to_num(acc_p)[select], 
+                       'Accumulation analysis R' : numpy.nan_to_num(acc_r)[select], 
+                       'Accumulation analysis Sigma' : numpy.nan_to_num(acc_sigma)[select], 
+                       'Accumulation analysis Dir' : numpy.nan_to_num(acc_dir)[select], 
                        }
 
 def selection_execute_button(data,metadata,source,source_selection,relationships):
@@ -265,7 +291,7 @@ def add_to_ignorelist(source,relationships):
 
 def panel(data,categories,metadata,relationships,comparison_panel):
 
-    source = ColumnDataSource(data={'Variable 1' : [], 'Variable 2' : [], 'R' : [], 'p-value' : [], 'shift' : [], 'r_no_shift' : [], 'p_no_shift' : [], 'r_no_v1_to_v2' : [], 'p_no_v1_to_v2' : [], 'r_no_v2_to_v1' : [], 'p_no_v2_to_v1' : []})
+    source = ColumnDataSource(data={'Variable 1' : [], 'Variable 2' : [], 'R' : [], 'p-value' : [], 'shift' : [], 'r_no_sihdaft' : [], 'p_no_shift' : [], 'r_no_v1_to_v2' : [], 'p_no_v1_to_v2' : [], 'r_no_v2_to_v1' : [], 'p_no_v2_to_v1' : []})
     seletion_source = ColumnDataSource(data={'Var 1' : [], 'Var 2' : [], 'Var 3' : [], 'Var 4' : [],  'Var 5' : []})
 
     columns = [
@@ -279,7 +305,11 @@ def panel(data,categories,metadata,relationships,comparison_panel):
         TableColumn(field="r_no_v1_to_v2",title='R V1->V2'),
         TableColumn(field="p_no_v1_to_v2",title='P V1->V2'),
         TableColumn(field="r_no_v2_to_v1",title='R V2->V1'),
-        TableColumn(field="p_no_v2_to_v1",title='P V2->V1'),           
+        TableColumn(field="p_no_v2_to_v1",title='P V2->V1'),
+        TableColumn(field="Accumulation analysis P",title='Accumulation analysis P'),
+        TableColumn(field="Accumulation analysis R",title='Accumulation analysis R'),
+        TableColumn(field="Accumulation analysis Sigma",title='Accumulation analysis Sigma'),
+        TableColumn(field="Accumulation analysis Dir",title='Accumulation analysis Dir'),
     ]
 
     ui['dt'] = DataTable(source=source, columns=columns,sizing_mode="stretch_both",height=700)

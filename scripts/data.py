@@ -1,6 +1,8 @@
+from types import NoneType
 import pandas as pd
 import numpy
 import numpy.ma
+import scipy
 import pickle
 import math
 from functools import partial
@@ -15,7 +17,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
         tables = []
         for tn in table_names:
             table = Table(api_key, base_id,tn)
-            print(tn)
             df = convert_to_dataframe(table.all(),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
@@ -26,10 +27,19 @@ def load_tables(table_names,api_key,base_id,cache=False):
             print('There are following duplicates in table ' + tn + " :" + str(t.index[t.index.duplicated()]))
 
         df = pd.concat(tables,axis=1,join='outer')
-        
 
+        # check if no days are missing
+        days_to_add = []
+        for i in range(0,len(df.index)-1):
+            day = df.index[i] + pd.offsets.Day()
+            while day != df.index[i+1]:
+                days_to_add.append(day)
+                day = day + pd.offsets.Day()
+        new_df = pd.DataFrame(index=days_to_add, columns=df.columns)
+        df = pd.concat([df, new_df])
+        df.sort_index(inplace=True)
 
-        # check if no days are missing 
+        # double check days are now consecutive                  
         for i in range(0,len(df.index)-1):
             assert (df.index[i] + pd.offsets.Day()) == df.index[i+1], "Error, no gaps in data allowed. The following consecutive data points are not a day apart: %s %s" % (str(df.index[i]),str(df.index[i+1]))
 
@@ -41,16 +51,18 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         # convert bool columns to float
         for col in df.columns:
-            print(col)
-            print(md['Units'].loc[col])
             if md['Units'].loc[col] == 'bool':
                 df[col] = pd.to_numeric(df[col])
 
         # convert enum columns to numbers
         for col in df.columns:
              if md['Units'].loc[col] == 'enum':
-                d = set(df[col].tolist())
-                d = {j:i for i,j in enumerate(d)}
+                levels = md['Enum order'].loc[col].split(';')
+                for s in set(df[col].tolist()):
+                    if s not in [numpy.nan] + levels:
+                       print("For variable <%s> String <%s> not in set of levels defined in metadata: [ %s ]" % (col,s,','.join(levels)))
+                       0/0
+                d = {j:i+1 for i,j in enumerate(levels)}
 
                 def enum_to_int(r,d):
                     if r != r:
@@ -58,7 +70,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
                     else:
                         return d[r]
 
-                df[col] = df[col].apply(partial(enum_to_int,d=d))                 
+                df[col] = df[col].apply(partial(enum_to_int,d=d))            
                 
         # convert hh:mm to interger representing the number of minutes from midnight
         # FOR NOW ALL SUCH FIELDS ARE USED AS DURATION FIELD IN AIRTABLES WHICH STORES THEM AS SECONDS 
@@ -183,8 +195,7 @@ def load_blood_tests(api_key,base_id,cache=False):
         for view in views:
             blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),index_column="Date", datatime_index=True)
             blood_tests[view].sort_index(inplace=True)
-            print(blood_tests[view].columns)
-            
+        
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
     else:
@@ -221,6 +232,40 @@ def filter_data(type,data,sig):
     result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i)) for i in ls])
     return filtr,result
 
+def accumulation_analysis(x,y,sigmas=[2,4,8,16,32,64]):
+                    best_p = 1.0
+                    best_r = None
+                    best_sigma = None
+                    best_dir = None
+                    for s in sigmas:
+                        # lets do the event based analysis - lets average data A with a historic gaussian filter prior to every given data point of B and that 
+                        # do correlation of the filtered A with B.
+
+                        # lets caluclate the first direction
+                        d1,d2 = data_aquisition_overlap_non_nans(filter_data('PastGauss',x,s)[0],y)
+                        if numpy.var(d1) != 0 and numpy.var(d2) != 0:
+                           res = scipy.stats.linregress(d1,d2)
+                           if res.pvalue < best_p:
+                              best_p = res.pvalue
+                              best_r = res.rvalue
+                              best_sigma = s
+                              best_dir = 'Var1 -> Var2'
+
+                        # then the secodn diretion
+                        d1,d2 = data_aquisition_overlap_non_nans(x,filter_data('PastGauss',y,s)[0])
+                        if numpy.var(d1) != 0 and numpy.var(d2) != 0:
+                           res = scipy.stats.linregress(d1,d2)
+                           if res.pvalue < best_p:
+                              best_p = res.pvalue
+                              best_r = res.rvalue
+                              best_sigma = s
+                              best_dir = 'Var2 -> Var1'
+                    
+                    return (best_p,best_r,best_sigma,best_dir)
+
+                               
+
+
 
 def data_aquisition_overlap(data1,data2):
    
@@ -234,8 +279,7 @@ def data_aquisition_overlap(data1,data2):
 def data_aquisition_overlap_non_nans(data1,data2):
     start,end  = data_aquisition_overlap(data1,data2)
     idx = numpy.logical_not(numpy.logical_or(numpy.isnan(numpy.array(data1)),numpy.isnan(numpy.array(data2))))[start:end]
-    return data1[start:end][idx],data2[start:end][idx]
-
+    return numpy.array(data1)[start:end][idx],numpy.array(data2)[start:end][idx]
 
 def cross_corr(data1,data2,filtered_data1,filtered_data2):
     start, end = data_aquisition_overlap(data1,data2)

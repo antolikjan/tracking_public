@@ -2,8 +2,6 @@ import pandas as pd
 from bokeh.models import ColumnDataSource, DataTable, TableColumn, HTMLTemplateFormatter, DateFormatter, Select, Column, Row, Div
 from scripts.ui_framework.analysis_panel import AnalysisPanel
 
-
-
 class BloodTests(AnalysisPanel):
     def __init__(self, data, categories, metadata, title):
 
