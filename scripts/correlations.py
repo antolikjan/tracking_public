@@ -134,9 +134,7 @@ def correlation_analysis(data,metadata,source,relationships):
                     acc_r.append(best_r)
                     acc_sigma.append(best_sigma)
                     acc_dir.append(best_dir)
-
-
-
+                    print(i)
 
     set_table(None,None,None,source,relationships)
 

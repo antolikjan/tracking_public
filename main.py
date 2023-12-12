@@ -4,7 +4,7 @@ from scripts.create_app import create_app
 from scripts.relationship_metadata import RelationshipMetadata
 import locals.config as cf
 
-cache=False
+cache=True
 
 blood_tests = load_blood_tests(api_key=cf.config['airtable_api_key'],base_id=cf.config['airtable_base_id'],cache=cache)
 

@@ -237,29 +237,33 @@ def accumulation_analysis(x,y,sigmas=[2,4,8,16,32,64]):
                     best_r = None
                     best_sigma = None
                     best_dir = None
-                    for s in sigmas:
-                        # lets do the event based analysis - lets average data A with a historic gaussian filter prior to every given data point of B and that 
-                        # do correlation of the filtered A with B.
 
-                        # lets caluclate the first direction
-                        d1,d2 = data_aquisition_overlap_non_nans(filter_data('PastGauss',x,s)[0],y)
-                        if numpy.var(d1) != 0 and numpy.var(d2) != 0:
-                           res = scipy.stats.linregress(d1,d2)
-                           if res.pvalue < best_p:
-                              best_p = res.pvalue
-                              best_r = res.rvalue
-                              best_sigma = s
-                              best_dir = 'Var1 -> Var2'
+                    varx = numpy.var(x)
+                    vary = numpy.var(y)
 
-                        # then the secodn diretion
-                        d1,d2 = data_aquisition_overlap_non_nans(x,filter_data('PastGauss',y,s)[0])
-                        if numpy.var(d1) != 0 and numpy.var(d2) != 0:
-                           res = scipy.stats.linregress(d1,d2)
-                           if res.pvalue < best_p:
-                              best_p = res.pvalue
-                              best_r = res.rvalue
-                              best_sigma = s
-                              best_dir = 'Var2 -> Var1'
+                    if varx != 0 and vary != 0:
+
+                        for s in sigmas:
+                            # lets do the event based analysis - lets average data A with a historic gaussian filter prior to every given data point of B and that 
+                            # do correlation of the filtered A with B.
+
+                            # lets caluclate the first direction
+                            res = scipy.stats.linregress(filter_data('PastGauss',x,s)[0],y)
+
+                            if res.pvalue < best_p:
+                                best_p = res.pvalue
+                                best_r = res.rvalue
+                                best_sigma = s
+                                best_dir = 'Var1 -> Var2'
+
+                            # then the secodn diretion
+                            res = scipy.stats.linregress(x,filter_data('PastGauss',y,s)[0])
+
+                            if res.pvalue < best_p:
+                                best_p = res.pvalue
+                                best_r = res.rvalue
+                                best_sigma = s
+                                best_dir = 'Var2 -> Var1'
                     
                     return (best_p,best_r,best_sigma,best_dir)
 
