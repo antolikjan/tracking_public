@@ -1,7 +1,7 @@
 from functools import partial
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, Panel
-from scripts.data import both_valid, data_aquisition_overlap_non_nans, accumulation_analysis
+from scripts.data import both_valid, data_aquisition_overlap_non_nans
 import scipy.stats
 import numpy
 import scripts.create_app
@@ -57,18 +57,27 @@ def correlation_analysis(data,metadata,source,relationships):
     print("Number of columns in the dataset: " + str(len(cols)))
 
     selected_range = numpy.logical_and(data.index >= datetime.strptime(ui['dt_pckr_start'].value,"%Y-%m-%d"),data.index <= datetime.strptime(ui['dt_pckr_end'].value,"%Y-%m-%d")) 
+    #prepare the convolved data
+    sigmas = [2,4]
+    convolved = []
+    for s in sigmas:
+        print(s)
+        convolved.append(filter_data('PastGauss',data.loc[selected_range,:].to_numpy(),s)[1])
 
     for i in range(len(cols)):
+        print(i)
         for j in range(i+1,len(cols)): 
 
             # make sure both variables are numeric
             if metadata['Units'].loc[cols[i]] != 'string' and metadata['Units'].loc[cols[j]] != 'string':
 
-                    # let's calculate the correlations only for positions where both values are defined and 
+                    x = data[cols[i]][selected_range].to_numpy()
+                    y = data[cols[j]][selected_range].to_numpy()
 
-                    d1,d2 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy(),data[cols[j]][selected_range].to_numpy())
-                    d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy()[1:],data[cols[j]][selected_range].to_numpy()[:-1])
-                    d1_shift2,d2_shift2 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy()[:-1],data[cols[j]][selected_range].to_numpy()[1:])
+                    # let's calculate the correlations only for positions where both values are defined and 
+                    d1,d2 = data_aquisition_overlap_non_nans(x,y)
+                    d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(x[1:],y[:-1])
+                    d1_shift2,d2_shift2 = data_aquisition_overlap_non_nans(x[:-1],y[1:])
 
                     # we will not calculate correlations if variance of one of the variables within overlapping positions is zero
                     # and we will not compute correlations if there are less then 21 points of overlap between the two data vectors
@@ -127,14 +136,47 @@ def correlation_analysis(data,metadata,source,relationships):
                        val2.append(cols[j])
                        rs.append(res.rvalue)
                        pvals.append(res.pvalue)
-                    
-                    # now lets the accumulation analysis
-                    (best_p,best_r,best_sigma,best_dir) = accumulation_analysis(data[cols[i]][selected_range].to_numpy(),data[cols[j]][selected_range].to_numpy())
+                    else:
+                       shift.append('x')
+                       val1.append(cols[i])
+                       val2.append(cols[j])
+                       rs.append('R')
+                       pvals.append(1.0)
+                        
+                    # now the accumulation analysis
+                    best_p = 1.0
+                    best_r = None
+                    best_sigma = None
+                    best_dir = None
+                
+                    for s in range(len(sigmas)): 
+                        # first one direction
+                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,i],y)
+                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
+
+                            res = scipy.stats.linregress(d1,d2)
+        
+                            if res.pvalue < best_p:
+                                    best_p = res.pvalue
+                                    best_r = res.rvalue
+                                    best_sigma = s
+                                    best_dir = 'Var1 -> Var2'
+    
+                        # then the second direction
+                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,j],x)
+                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
+                            res = scipy.stats.linregress(d1,d2)
+        
+                            if res.pvalue < best_p:
+                                best_p = res.pvalue
+                                best_r = res.rvalue
+                                best_sigma = s
+                                best_dir = 'Var2 -> Var1'
+
                     acc_p.append(best_p)
                     acc_r.append(best_r)
-                    acc_sigma.append(best_sigma)
                     acc_dir.append(best_dir)
-                    print(i)
+                    acc_sigma.append(best_sigma)
 
     set_table(None,None,None,source,relationships)
 
@@ -161,7 +203,8 @@ def set_table(attr, old, new, source,relationships):
         select = numpy.logical_and(select1,numpy.logical_and(select2,select3))
 
         print(len(pvals))                    
-        print(len(pvals_nosh))     
+        print(len(pvals_nosh))
+        print(len(acc_p))     
         source.data = {'Variable 1' : numpy.array(val1)[select], 
                        'Variable 2' : numpy.array(val2)[select], 
                        'R' : numpy.nan_to_num(rs)[select], 

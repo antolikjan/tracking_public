@@ -61,7 +61,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
                 for s in set(df[col].tolist()):
                     if s not in [numpy.nan] + levels:
                        print("For variable <%s> String <%s> not in set of levels defined in metadata: [ %s ]" % (col,s,','.join(levels)))
-                       0/0
                 d = {j:i+1 for i,j in enumerate(levels)}
 
                 def enum_to_int(r,d):
@@ -228,48 +227,8 @@ def filter_data(type,data,sig):
     filtr = fff(ls,sig,int(len(data)/2))
 
     d = numpy.ma.masked_invalid(data)
-
-    result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i)) for i in ls])
+    result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0) for i in ls])
     return filtr,result
-
-def accumulation_analysis(x,y,sigmas=[2,4,8,16,32,64]):
-                    best_p = 1.0
-                    best_r = None
-                    best_sigma = None
-                    best_dir = None
-
-                    varx = numpy.var(x)
-                    vary = numpy.var(y)
-
-                    if varx != 0 and vary != 0:
-
-                        for s in sigmas:
-                            # lets do the event based analysis - lets average data A with a historic gaussian filter prior to every given data point of B and that 
-                            # do correlation of the filtered A with B.
-
-                            # lets caluclate the first direction
-                            res = scipy.stats.linregress(filter_data('PastGauss',x,s)[0],y)
-
-                            if res.pvalue < best_p:
-                                best_p = res.pvalue
-                                best_r = res.rvalue
-                                best_sigma = s
-                                best_dir = 'Var1 -> Var2'
-
-                            # then the secodn diretion
-                            res = scipy.stats.linregress(x,filter_data('PastGauss',y,s)[0])
-
-                            if res.pvalue < best_p:
-                                best_p = res.pvalue
-                                best_r = res.rvalue
-                                best_sigma = s
-                                best_dir = 'Var2 -> Var1'
-                    
-                    return (best_p,best_r,best_sigma,best_dir)
-
-                               
-
-
 
 def data_aquisition_overlap(data1,data2):
    
