@@ -129,6 +129,13 @@ def correlation_analysis(data,metadata,source,relationships):
                        else:
                           rs_v1_pr_v2.append(None)
                           pvals_v1_pr_v2.append(None)
+                    else:
+                        rs_nosh.append(None)
+                        pvals_nosh.append(None)
+                        rs_v2_pr_v1.append(None)
+                        pvals_v2_pr_v1.append(None)
+                        rs_v1_pr_v2.append(None)
+                        pvals_v1_pr_v2.append(None)
 
                     if res != None:
                        shift.append(shi)
@@ -159,7 +166,7 @@ def correlation_analysis(data,metadata,source,relationships):
                             if res.pvalue < best_p:
                                     best_p = res.pvalue
                                     best_r = res.rvalue
-                                    best_sigma = s
+                                    best_sigma = sigmas[s]
                                     best_dir = 'Var1 -> Var2'
     
                         # then the second direction
@@ -170,7 +177,7 @@ def correlation_analysis(data,metadata,source,relationships):
                             if res.pvalue < best_p:
                                 best_p = res.pvalue
                                 best_r = res.rvalue
-                                best_sigma = s
+                                best_sigma = sigmas[s]
                                 best_dir = 'Var2 -> Var1'
 
                     acc_p.append(best_p)
