@@ -58,7 +58,7 @@ def correlation_analysis(data,metadata,source,relationships):
 
     selected_range = numpy.logical_and(data.index >= datetime.strptime(ui['dt_pckr_start'].value,"%Y-%m-%d"),data.index <= datetime.strptime(ui['dt_pckr_end'].value,"%Y-%m-%d")) 
     #prepare the convolved data
-    sigmas = [2,4]
+    sigmas = [2,4,8,16,32,64,128]
     convolved = []
     for s in sigmas:
         print(s)
