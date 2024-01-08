@@ -344,3 +344,6 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             # Hide the correlation slope if there are not enough data points
             self.plots['correlations_slope'].visible = False
             self.plots['correlations'].title.text = 'R: N/A      p_value: N/A'
+
+        self.plots['correlations'].xaxis.axis_label = self.ui_elements["select_variable1"].value
+        self.plots['correlations'].yaxis.axis_label = self.ui_elements["select_variable2"].value
