@@ -28,6 +28,8 @@ class ComparisonPanel(PairedAnalysis):
 
             ##### WIDGETS
             self.register_widget(Toggle(label="Show stats",button_type="success"),'show_stats_button',['active'])
+            self.register_widget(Toggle(label="Show bars",button_type="success"),'show_bars_button',['active'])
+            
 
             # FIGURE 1
             p1 = figure(width=300,height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
@@ -113,7 +115,7 @@ class ComparisonPanel(PairedAnalysis):
 
       def compose_widgets(self):
           w = super().compose_widgets()
-          w2 = Column(w,Div(text="""<hr width=240px>"""),self.ui_elements["show_stats_button"],width=240)
+          w2 = Column(w,Div(text="""<hr width=240px>"""),self.ui_elements["show_stats_button"],self.ui_elements["show_bars_button"],width=240)
           return w2
 
       def compose_plots(self):
@@ -156,7 +158,7 @@ class ComparisonPanel(PairedAnalysis):
           # update bar plot data if relevant
           y1,y2 = data_aquisition_overlap_non_nans(self.data_sources['source_corr'].data['x_values'],self.data_sources['source_corr'].data['y_values'])
 
-          if len(set(y1)) < 11 or len(set(y2)) < 11:
+          if (len(set(y1)) < 11 or len(set(y2)) < 11) and self.ui_elements["show_bars_button"].active:
              self.bar_plot_flag = True      
              self.bar_plot_x_axis_flag = False
              if len(set(y1)) > len(set(y2)):

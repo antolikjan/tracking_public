@@ -12,5 +12,4 @@ df,metadata,categories = load_tables(cf.config['tables_to_load'],api_key=cf.conf
 
 rm = RelationshipMetadata(metadata,initialize=True)
 
-
 curdoc().add_root(create_app(df,metadata,categories,rm, blood_tests))

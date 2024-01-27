@@ -136,7 +136,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
     for category in table_names:
         categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
 
-
     return df,md,categories
 
 def special_preprocessing_rules(df,md):

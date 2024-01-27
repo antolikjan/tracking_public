@@ -87,7 +87,7 @@ class BloodTests(AnalysisPanel):
                 # Check if the cell_color is 'NA', indicating no data
                 if cell_color == 'NA':
                     no_data_for_column = True
-                        # Add a column with a cell template for no data
+                    # Add a column with a cell template for no data
                     columns.append(TableColumn(field=col, title=col, formatter=HTMLTemplateFormatter(template = '<div style="background-color: "#FFFFFF" ;"> </div>')))
                     break
 
@@ -170,7 +170,7 @@ def compare(x, opt_min, opt_max, norm_min, norm_max):
     1 - Within the optimal range.
     2 - Within the normal range but outside the optimal range.
     3 - Outside both the optimal and normal ranges.
-
+    4 - No ranges are defined for the biomarker
 
     Returns:
     int: An integer representing the category to which 'x' belongs.
@@ -223,7 +223,6 @@ def classify_range(metadata, marker, col):
         # Handle errors in metadata retrieval
         print(f'There is no data for the marker "{col}" in metadata')
         return "NA"
-
 
     # Check if any of the range indicators is not present
     if pd.isna(norm_min) or pd.isna(norm_max) or pd.isna(opt_min) or pd.isna(opt_max):  
@@ -292,19 +291,22 @@ def classify_range(metadata, marker, col):
             else: 
                 if not pd.isna(norm_min) and not pd.isna(norm_max):
                     if norm_min<=marker<=norm_max:
-                        return 2
+                        return 1
                     else:
                         return 3
                 elif not pd.isna(norm_min) and pd.isna(norm_max):
                     if marker>=norm_min:
-                        return 2
+                        return 1
                     else:
                         return 3
                 elif pd.isna(norm_min) and not pd.isna(norm_max):
                     if marker <= norm_max:
-                        return 2
-                else:
-                    return 3
+                        return 1
+                    else:
+                        return 3
+                elif pd.isna(norm_min) and pd.isna(norm_max):
+                    return 4
+
     # Handle cases where all range indicators are present
     else:
         return compare(marker, opt_min, opt_max, norm_min, norm_max)
@@ -326,5 +328,6 @@ def color_mapper(metadata, col_name, cell_value):
     color_code = {1: '#2fd01a',  # Green
                   2: '#f6e741',  # Yellow
                   3: '#fb3232',  # Red
+                  4: '#E1E1E1',
                   "NA" : 'NA'}  
     return color_code.get(range_value, '#EADDCA')  # Default to light brown if not found

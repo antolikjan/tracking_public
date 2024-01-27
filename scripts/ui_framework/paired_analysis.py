@@ -44,6 +44,7 @@ class PairedAnalysis(AnalysisPanel):
           if self.ui_elements["select_variable1"].value not in self.categories[self.ui_elements["select_category1"].value]:
              self.ui_elements["select_variable1"].value = self.categories[self.ui_elements["select_category1"].value][0]
 
+
           if self.ui_elements["select_category2"].value != 'None':
             if self.ui_elements["select_variable2"].value not in self.categories[self.ui_elements["select_category2"].value]:
                self.ui_elements["select_variable2"].value = self.categories[self.ui_elements["select_category2"].value][0]
