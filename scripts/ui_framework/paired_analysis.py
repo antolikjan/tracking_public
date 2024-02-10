@@ -24,11 +24,11 @@ class PairedAnalysis(AnalysisPanel):
           self.register_widget(RadioButtonGroup(labels=["Var2 -> Var1","no shift","Var1 -> Var2"], active=1),'shift_button_group',['active'])
 
           ### DATA
-          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['DistanceFitbit'],'y_values2' : data['RHR'],'y_values_filtered' : data['DistanceFitbit'],'y_values_filtered' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
+          self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : data.index,'y_values1' : data['DistanceFitbit'],'y_values2' : data['RHR'],'filter1' : data['RHR']*0,'filter2' : data['RHR']*0})
 
       def compose_widgets(self):
-          widgets_var1 = Column(Div(text="""<b>Varibale 1</b>"""),self.ui_elements["select_category1"], self.ui_elements["select_variable1"],self.ui_elements["select_filter1"],self.ui_elements["select_sigma1"],sizing_mode="fixed", width=120,height=500)
-          widgets_var2 = Column(Div(text="""<b>Varibale 2</b>"""),self.ui_elements["select_category2"], self.ui_elements["select_variable2"],self.ui_elements["select_filter2"],self.ui_elements["select_sigma2"],sizing_mode="fixed", width=120,height=500)  
+          widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""),self.ui_elements["select_category1"], self.ui_elements["select_variable1"],self.ui_elements["select_filter1"],self.ui_elements["select_sigma1"],sizing_mode="fixed", width=120,height=500)
+          widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""),self.ui_elements["select_category2"], self.ui_elements["select_variable2"],self.ui_elements["select_filter2"],self.ui_elements["select_sigma2"],sizing_mode="fixed", width=120,height=500)  
           w1 = Row(widgets_var1,widgets_var2,width=240)
           w2 = Column(w1,Div(text="""<hr width=240px>"""),self.ui_elements["shift_button_group"],width=240)
           return w2
@@ -43,6 +43,7 @@ class PairedAnalysis(AnalysisPanel):
 
           if self.ui_elements["select_variable1"].value not in self.categories[self.ui_elements["select_category1"].value]:
              self.ui_elements["select_variable1"].value = self.categories[self.ui_elements["select_category1"].value][0]
+
 
           if self.ui_elements["select_category2"].value != 'None':
             if self.ui_elements["select_variable2"].value not in self.categories[self.ui_elements["select_category2"].value]:

@@ -1,6 +1,5 @@
 from bokeh.models import Row, Div, Spacer, Panel
 from scripts.data import categories, filter_data, cross_corr, both_valid, data_aquisition_overlap
-from functools import partial
 
 
 class AnalysisPanel():
@@ -79,15 +78,9 @@ class AnalysisPanel():
 
 
       def update(self,attr,old,new):
-          print('Update: ')
-          print(attr)
-          print(old)
-          print(new)
-          print('-----------------')
           self.update_widgets()        
           self.update_data()        
           self.update_plots()
-          print('Finished')
 
       def register_widget(self,widget,widget_name,actions_to_respond_to):
           """
@@ -102,6 +95,7 @@ class AnalysisPanel():
           self.ui_elements[widget_name] = widget
           for action in actions_to_respond_to:
               self.ui_elements[widget_name].on_change(action, self.update)
+              
 
 
 

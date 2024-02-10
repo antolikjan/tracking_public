@@ -1,6 +1,8 @@
+from types import NoneType
 import pandas as pd
 import numpy
 import numpy.ma
+import scipy
 import pickle
 import math
 from functools import partial
@@ -15,7 +17,6 @@ def load_tables(table_names,api_key,base_id,cache=False):
         tables = []
         for tn in table_names:
             table = Table(api_key, base_id,tn)
-            print(tn)
             df = convert_to_dataframe(table.all(),index_column="Date",datatime_index=True)
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
@@ -27,7 +28,18 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         df = pd.concat(tables,axis=1,join='outer')
 
-        # check if no days are missing 
+        # check if no days are missing
+        days_to_add = []
+        for i in range(0,len(df.index)-1):
+            day = df.index[i] + pd.offsets.Day()
+            while day != df.index[i+1]:
+                days_to_add.append(day)
+                day = day + pd.offsets.Day()
+        new_df = pd.DataFrame(index=days_to_add, columns=df.columns)
+        df = pd.concat([df, new_df])
+        df.sort_index(inplace=True)
+
+        # double check days are now consecutive                  
         for i in range(0,len(df.index)-1):
             assert (df.index[i] + pd.offsets.Day()) == df.index[i+1], "Error, no gaps in data allowed. The following consecutive data points are not a day apart: %s %s" % (str(df.index[i]),str(df.index[i+1]))
 
@@ -40,13 +52,16 @@ def load_tables(table_names,api_key,base_id,cache=False):
         # convert bool columns to float
         for col in df.columns:
             if md['Units'].loc[col] == 'bool':
-               df[col] = pd.to_numeric(df[col])
+                df[col] = pd.to_numeric(df[col])
 
         # convert enum columns to numbers
         for col in df.columns:
              if md['Units'].loc[col] == 'enum':
-                d = set(df[col].tolist())
-                d = {j:i for i,j in enumerate(d)}
+                levels = md['Enum order'].loc[col].split(';')
+                for s in set(df[col].tolist()):
+                    if s not in [numpy.nan] + levels:
+                       print("For variable <%s> String <%s> not in set of levels defined in metadata: [ %s ]" % (col,s,','.join(levels)))
+                d = {j:i+1 for i,j in enumerate(levels)}
 
                 def enum_to_int(r,d):
                     if r != r:
@@ -54,7 +69,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
                     else:
                         return d[r]
 
-                df[col] = df[col].apply(partial(enum_to_int,d=d))                 
+                df[col] = df[col].apply(partial(enum_to_int,d=d))            
                 
         # convert hh:mm to interger representing the number of minutes from midnight
         # FOR NOW ALL SUCH FIELDS ARE USED AS DURATION FIELD IN AIRTABLES WHICH STORES THEM AS SECONDS 
@@ -80,7 +95,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
         #            return s
         #        df[col] = df[col].apply(hhmm_to_min)
 
-        # Somtimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
+        # Sometimes airtable puts NaNs into tables in the form {'specialValue' : NaN}. This replaces those with just NaN
         for col in df.columns:
             def nandict_to_nan(s):
                 if isinstance(s,dict):
@@ -88,6 +103,9 @@ def load_tables(table_names,api_key,base_id,cache=False):
                 else:
                     return s
             df[col] = df[col].apply(nandict_to_nan)
+
+        # apply additional custom preprocessing
+        special_preprocessing_rules(df,md)
 
         # remove columns that are strings or to be ignored
         to_be_droped=[]
@@ -114,12 +132,24 @@ def load_tables(table_names,api_key,base_id,cache=False):
         (df,md) = pickle.load(open('./locals/cache.pickle','br'))
         
     # let's populate categories 
-    #
     categories = {}
     for category in table_names:
         categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
 
     return df,md,categories
+
+def special_preprocessing_rules(df,md):
+    
+    # FITIBIT - correct data on days when it wasn't worn
+    # If you don't wear fitibit on the given day it still stores 0 as number of steps and some other metrics that bias the data
+    # Replace all Fitbit table rows with 0 if number of steps is less than 500 (which most likely means I didn't wear fitbit on that day)
+    for index, row in df.iterrows():
+        if row['Steps'] < 500:
+            for col in df.columns:
+                if md['Category'].loc[col] == 'Fitbit':
+                   df.at[index,col] = numpy.nan
+
+    return df
 
 #def load_PANAS_tables(api_key,base_id):
 #    tables = []
@@ -136,14 +166,34 @@ def load_blood_tests(api_key,base_id,cache=False):
     table = Table(api_key, base_id, 'BloodTest')
 
     views = {
-        "Cardio" : ["Troponin_hs (ng/l)","LP-PLA2 (U/I)"]
+        "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCH  (pg)", "MCHC (g/dl)","Palettel (G/L)", "Palettel Distribution Width (%)", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time (s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
+        "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes  (%)", "Esophiles  (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
+        "Immunity" : ["CRP (mg/l)", "IG (g/l)", "IgA (g/l)", "IgM (g/l)", "IgE (IU/l)", "Rheumatoid Factor (kU/l)", "IL 6 (ng/l)"],
+        "Minerals" : ["Na (mEq/L)", "K (mEq/L)", "Cl (mmol/l)", "Ca (mmol/l)", "Ca(corig) (mmol/l)", "Fe (mumol/l)", "Mg (mmol/l)", "P (mmol/l)", "Cu (μmol/L)"],
+        "Kidney Function" : ["Urea (mmol/L)", "Kreatinin  (μmol/l)", "GFR (CKD-EPI) (ml/s/1.73 m2)", "eGFR (Lund-Malmo) (ml/s/1.73 m2)", "Uric acid (μmol/l)", "Cystain C (mg/l)", "GF Cystain C (ml/s/1,73 m2)"],
+        "Liver Function" : ["Bilirubin (overall) (µmol/l)", "Bilirubin (conjugated) (µmol/l)", "ALT (μkat/l)", "AST (μkat/l)", "GGT (μkat/l)", "ALP (μkat/l)"],
+        "Pancreas" : ["Amylase pancreatic (blood) (μkat/l)", "Amalyse", "Lipase (μkat/l)"],
+        "Proteins" : ["Proteins (g/L)", "Ablumin (g/L)", "Ferritin (ug/L)"],
+        "Cardio" : ["Troponin_hs (ng/l)", "LP-PLA2 (U/I)"],
+        "Glucose" : ["Fasting Glucose (mmol/l)", "HOMA-IR ()", "QUICKI ()", "HbA1c (mmol/mol)"],
+        "Iron metabolism" : ["Fe (mumol/l)", "Ferritin (ug/L)", "TIBC (umol/l)", "UIBC", "Transferin (g/l)", "TRF saturation (%)"],
+        "Lipids" : ["Cholesterol (mmol/l)", "LDL (mmol/l)", "HDL (mmol/l)", "Tryglicerides (mmol/l)", "Non-HDL cholesterol (mmol/l)", "Chol/HDL ()", "Tryg/HDL ()", "Apolipoprotein A1 (g/L)", "Apolipoprotein B (g/L)", "Lp(a) (g/L)", "Lp(a) (nmol/l)"],
+        "Thyroid" : ["TSH (mU/l)", "free-T4 (pmol/l)"],
+        "Hormones" : ["Insulin (mlU/l)", "IGF-1 (µg/l)", "estradiol (pmol/l)", "testosterone (nmol/l)", "Cortisol (nmol/l)", "DHEAS (μmol/l)"],
+        "Vitamins" : ["Homocystein (µmol/l)", "Vitamin D (nmol/l)", "Folate (nmol/l)", "B12 (pmol/l)"],
+        "Prostate" : ["Total PSA (µg/l)", "Free PSA  (µg/l)", "FPSA/PSA ()"],
+        "BiologicalAgeScores" : ["PhenoAge", "Aging AI 3.0", "YoungAI"],
+        "Inflammation" : ["CRP (mg/l)", "LDH (ukat/l)"],
+        "Cancer" : ["Total PSA (µg/l)", "Free PSA  (µg/l)", "AFP (ug/l)", "Free beta-HCG (ng/ml)"],
+        "PhenoAge" : ["Leukocites (G/L)", "MCV (fl)", "RBC Distribution Width CV (%)", "Lymfocytes (%)", "CRP (mg/l)", "Kreatinin  (μmol/l)", "ALP (μkat/l)", "Ablumin (g/L)", "Fasting Glucose (mmol/l)"]        
     }
 
     if not cache:
         blood_tests = {}
         for view in views:
-            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]), index_column="Date",datatime_index=True)
-            print(blood_tests[view].columns)
+            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),index_column="Date", datatime_index=True)
+            blood_tests[view].sort_index(inplace=True)
+        
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
     else:
@@ -176,10 +226,8 @@ def filter_data(type,data,sig):
     filtr = fff(ls,sig,int(len(data)/2))
 
     d = numpy.ma.masked_invalid(data)
-
-    result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i)) for i in ls])
+    result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0) for i in ls])
     return filtr,result
-
 
 def data_aquisition_overlap(data1,data2):
    
@@ -193,8 +241,7 @@ def data_aquisition_overlap(data1,data2):
 def data_aquisition_overlap_non_nans(data1,data2):
     start,end  = data_aquisition_overlap(data1,data2)
     idx = numpy.logical_not(numpy.logical_or(numpy.isnan(numpy.array(data1)),numpy.isnan(numpy.array(data2))))[start:end]
-    return data1[start:end][idx],data2[start:end][idx]
-
+    return numpy.array(data1)[start:end][idx],numpy.array(data2)[start:end][idx]
 
 def cross_corr(data1,data2,filtered_data1,filtered_data2):
     start, end = data_aquisition_overlap(data1,data2)

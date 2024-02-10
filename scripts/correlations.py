@@ -8,6 +8,7 @@ import scripts.create_app
 import scripts.comparison
 from datetime import datetime
 from datetime import date
+from scripts.data import filter_data
 
 ui = {}
 
@@ -23,6 +24,11 @@ rs_nosh = []
 pvals_v1_pr_v2 = []
 pvals_v2_pr_v1 = []
 pvals_nosh = []
+
+acc_p = []
+acc_r = []
+acc_dir = []
+acc_sigma = []
 
 
 data_table = None
@@ -41,22 +47,37 @@ def correlation_analysis(data,metadata,source,relationships):
     pvals_v2_pr_v1.clear()
     pvals_nosh.clear()
 
+    acc_p.clear()
+    acc_r.clear()
+    acc_dir.clear()
+    acc_sigma.clear()
+
+
     cols = list(data.columns)    
     print("Number of columns in the dataset: " + str(len(cols)))
+
     selected_range = numpy.logical_and(data.index >= datetime.strptime(ui['dt_pckr_start'].value,"%Y-%m-%d"),data.index <= datetime.strptime(ui['dt_pckr_end'].value,"%Y-%m-%d")) 
+    #prepare the convolved data
+    sigmas = [2,4,8,16,32,64,128]
+    convolved = []
+    for s in sigmas:
+        print(s)
+        convolved.append(filter_data('PastGauss',data.loc[selected_range,:].to_numpy(),s)[1])
 
     for i in range(len(cols)):
+        print(i)
         for j in range(i+1,len(cols)): 
 
             # make sure both variables are numeric
             if metadata['Units'].loc[cols[i]] != 'string' and metadata['Units'].loc[cols[j]] != 'string':
 
-                    # let's calculate the correlations only for positions where both values are defined and 
-                    # for the three regressions corresponding to -1, 1 and 0 day shifts, we will report only the one with the lowest p-value
+                    x = data[cols[i]][selected_range].to_numpy()
+                    y = data[cols[j]][selected_range].to_numpy()
 
-                    d1,d2 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy(),data[cols[j]][selected_range].to_numpy())
-                    d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy()[1:],data[cols[j]][selected_range].to_numpy()[:-1])
-                    d1_shift2,d2_shift2 = data_aquisition_overlap_non_nans(data[cols[i]][selected_range].to_numpy()[:-1],data[cols[j]][selected_range].to_numpy()[1:])
+                    # let's calculate the correlations only for positions where both values are defined and 
+                    d1,d2 = data_aquisition_overlap_non_nans(x,y)
+                    d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(x[1:],y[:-1])
+                    d1_shift2,d2_shift2 = data_aquisition_overlap_non_nans(x[:-1],y[1:])
 
                     # we will not calculate correlations if variance of one of the variables within overlapping positions is zero
                     # and we will not compute correlations if there are less then 21 points of overlap between the two data vectors
@@ -108,6 +129,13 @@ def correlation_analysis(data,metadata,source,relationships):
                        else:
                           rs_v1_pr_v2.append(None)
                           pvals_v1_pr_v2.append(None)
+                    else:
+                        rs_nosh.append(None)
+                        pvals_nosh.append(None)
+                        rs_v2_pr_v1.append(None)
+                        pvals_v2_pr_v1.append(None)
+                        rs_v1_pr_v2.append(None)
+                        pvals_v1_pr_v2.append(None)
 
                     if res != None:
                        shift.append(shi)
@@ -115,6 +143,47 @@ def correlation_analysis(data,metadata,source,relationships):
                        val2.append(cols[j])
                        rs.append(res.rvalue)
                        pvals.append(res.pvalue)
+                    else:
+                       shift.append('x')
+                       val1.append(cols[i])
+                       val2.append(cols[j])
+                       rs.append('R')
+                       pvals.append(1.0)
+                        
+                    # now the accumulation analysis
+                    best_p = 1.0
+                    best_r = None
+                    best_sigma = None
+                    best_dir = None
+                
+                    for s in range(len(sigmas)): 
+                        # first one direction
+                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,i],y)
+                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
+
+                            res = scipy.stats.linregress(d1,d2)
+        
+                            if res.pvalue < best_p:
+                                    best_p = res.pvalue
+                                    best_r = res.rvalue
+                                    best_sigma = sigmas[s]
+                                    best_dir = 'Var1 -> Var2'
+    
+                        # then the second direction
+                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,j],x)
+                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
+                            res = scipy.stats.linregress(d1,d2)
+        
+                            if res.pvalue < best_p:
+                                best_p = res.pvalue
+                                best_r = res.rvalue
+                                best_sigma = sigmas[s]
+                                best_dir = 'Var2 -> Var1'
+
+                    acc_p.append(best_p)
+                    acc_r.append(best_r)
+                    acc_dir.append(best_dir)
+                    acc_sigma.append(best_sigma)
 
     set_table(None,None,None,source,relationships)
 
@@ -141,7 +210,8 @@ def set_table(attr, old, new, source,relationships):
         select = numpy.logical_and(select1,numpy.logical_and(select2,select3))
 
         print(len(pvals))                    
-        print(len(pvals_nosh))     
+        print(len(pvals_nosh))
+        print(len(acc_p))     
         source.data = {'Variable 1' : numpy.array(val1)[select], 
                        'Variable 2' : numpy.array(val2)[select], 
                        'R' : numpy.nan_to_num(rs)[select], 
@@ -153,6 +223,10 @@ def set_table(attr, old, new, source,relationships):
                        'p_no_v1_to_v2' : numpy.nan_to_num(pvals_v1_pr_v2)[select], 
                        'r_no_v2_to_v1' : numpy.nan_to_num(rs_v2_pr_v1)[select], 
                        'p_no_v2_to_v1' : numpy.nan_to_num(pvals_v2_pr_v1)[select], 
+                       'Accumulation analysis P' : numpy.nan_to_num(acc_p)[select], 
+                       'Accumulation analysis R' : numpy.nan_to_num(acc_r)[select], 
+                       'Accumulation analysis Sigma' : numpy.nan_to_num(acc_sigma)[select], 
+                       'Accumulation analysis Dir' : numpy.nan_to_num(acc_dir)[select], 
                        }
 
 def selection_execute_button(data,metadata,source,source_selection,relationships):
@@ -265,8 +339,7 @@ def add_to_ignorelist(source,relationships):
 
 def panel(data,categories,metadata,relationships,comparison_panel):
 
-    source = ColumnDataSource(data={'Variable 1' : [], 'Variable 2' : [], 'R' : [], 'p-value' : [], 'shift' : [], 'r_no_shift' : [], 'p_no_shift' : [], 'r_no_v1_to_v2' : [], 'p_no_v1_to_v2' : [], 'r_no_v2_to_v1' : [], 'p_no_v2_to_v1' : []})
-
+    source = ColumnDataSource(data={'Variable 1' : [], 'Variable 2' : [], 'R' : [], 'p-value' : [], 'shift' : [], 'r_no_sihdaft' : [], 'p_no_shift' : [], 'r_no_v1_to_v2' : [], 'p_no_v1_to_v2' : [], 'r_no_v2_to_v1' : [], 'p_no_v2_to_v1' : []})
     seletion_source = ColumnDataSource(data={'Var 1' : [], 'Var 2' : [], 'Var 3' : [], 'Var 4' : [],  'Var 5' : []})
 
     columns = [
@@ -280,7 +353,11 @@ def panel(data,categories,metadata,relationships,comparison_panel):
         TableColumn(field="r_no_v1_to_v2",title='R V1->V2'),
         TableColumn(field="p_no_v1_to_v2",title='P V1->V2'),
         TableColumn(field="r_no_v2_to_v1",title='R V2->V1'),
-        TableColumn(field="p_no_v2_to_v1",title='P V2->V1'),           
+        TableColumn(field="p_no_v2_to_v1",title='P V2->V1'),
+        TableColumn(field="Accumulation analysis P",title='Accumulation analysis P'),
+        TableColumn(field="Accumulation analysis R",title='Accumulation analysis R'),
+        TableColumn(field="Accumulation analysis Sigma",title='Accumulation analysis Sigma'),
+        TableColumn(field="Accumulation analysis Dir",title='Accumulation analysis Dir'),
     ]
 
     ui['dt'] = DataTable(source=source, columns=columns,sizing_mode="stretch_both",height=700)
@@ -300,7 +377,7 @@ def panel(data,categories,metadata,relationships,comparison_panel):
     ui['button4'].on_click(partial(add_to_blacklist,source=source,relationships=relationships))
 
 
-    ui['max_p'] =  Slider(start=0.0, end=1, value=0.01, step=0.01, title="maximum p-value",width=200)
+    ui['max_p'] =  Slider(start=0.0, end=0.2, value=0.01, step=0.01, title="maximum p-value",width=200)
     ui['max_p'].on_change('value',partial(set_table,source=source,relationships=relationships))
 
     ui['show_which'] = RadioButtonGroup(labels=['show all','show selected','pick'], active=0)
