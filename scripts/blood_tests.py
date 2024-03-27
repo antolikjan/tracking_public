@@ -21,10 +21,10 @@ class BloodTests(AnalysisPanel):
         self.views = data.keys()
 
         # Create a dropdown widget to select different views
-        self.register_widget(Select(title="List of Views", options=list(self.views), value='WBC Rest'), 'views',  ['value'])
+        self.register_widget(Select(title="List of Views", options=list(self.views), value='Minerals'), 'views',  ['value'])
 
         
-        self.table = 'WBC Rest'   # Initial (default) view
+        self.table = 'Minerals'   # Initial (default) view
         # Create a data source for the initial view
         self.data_sources[self.table] = self.raw_data[self.table]
         # Create columns for the DataTable widget based on the selected view

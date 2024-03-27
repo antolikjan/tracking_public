@@ -190,8 +190,11 @@ def load_blood_tests(api_key,base_id,cache=False):
 
     if not cache:
         blood_tests = {}
+        print(next(table.iterate())[0])
+        fields = next(table.iterate())[0]["fields"].keys()
         for view in views:
-            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),index_column="Date", datatime_index=True)
+            v = list(set(fields).intersection(views[view]))
+            blood_tests[view] = convert_to_dataframe(table.all(fields = v+["Date"]),index_column="Date", datatime_index=True)
             blood_tests[view].sort_index(inplace=True)
         
         # cache the data
