@@ -20,7 +20,6 @@ class RelationshipMetadata():
                   if (n,m) not in self.rm.index:
                     a.append(n)
                     b.append(m)
-                    
                     # add two relationships that are both interventions on black list
                     if metadata['Intervention'].loc[n] != 'Intervention' or metadata['Intervention'].loc[m] != 'Intervention': 
                        bl.append(False)
