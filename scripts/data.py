@@ -1,4 +1,3 @@
-from types import NoneType
 import pandas as pd
 import numpy
 import numpy.ma
@@ -21,6 +20,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
             df.sort_index(inplace=True)
             df.drop(df.index[:1], inplace=True)
             tables.append(df)
+
 
         # check for duplicates
         for t,tn in zip(tables,table_names):
@@ -135,7 +135,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
     categories = {}
     for category in table_names:
         categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
-
+    
     return df,md,categories
 
 def special_preprocessing_rules(df,md):
@@ -190,8 +190,11 @@ def load_blood_tests(api_key,base_id,cache=False):
 
     if not cache:
         blood_tests = {}
+        print(next(table.iterate())[0])
+        fields = next(table.iterate())[0]["fields"].keys()
         for view in views:
-            blood_tests[view] = convert_to_dataframe(table.all(fields = views[view]+["Date"]),index_column="Date", datatime_index=True)
+            v = list(set(fields).intersection(views[view]))
+            blood_tests[view] = convert_to_dataframe(table.all(fields = v+["Date"]),index_column="Date", datatime_index=True)
             blood_tests[view].sort_index(inplace=True)
         
         # cache the data

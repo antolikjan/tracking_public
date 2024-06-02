@@ -23,7 +23,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
 
         self.views = views
-        self.bloodtest_dates = views['WBC Rest'].index     # dates of blood tests
+        self.bloodtest_dates = views['Minerals'].index     # dates of blood tests
 
         ### WIDGETS
         ## Initialize and register various widgets for user interaction.
@@ -33,14 +33,14 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         self.register_widget(Select(title = 'Name', value = 'DistanceFitbit', options = list(categories['Fitbit'])),'select_variable1',['value'])
 
           # widgets for variable 2
-        self.register_widget(Select(title="View",  options=list(views.keys()), value = 'WBC Rest'),'select_view',['value'])
-        self.register_widget(Select(title = 'Biomarker Name', options = list(views['WBC Rest']), value='Leukocites (G/L)'),'select_variable2',['value'])
+        self.register_widget(Select(title="View",  options=list(views.keys()), value = 'Minerals'),'select_view',['value'])
+        self.register_widget(Select(title = 'Biomarker Name', options = list(views['Minerals']), value='P (mmol/l)'),'select_variable2',['value'])
 
         self.register_widget(Slider(start=10, end=300, value=30, step=1, title="Number of days to average variable 1 on"),"select_segmentation",['value'])
 
 
         # Segment and filter data for analysis
-        v1_segmented, v2_filtered = self.segment_and_filter_redundant_data('DistanceFitbit', 'WBC Rest', 'Leukocites (G/L)')
+        v1_segmented, v2_filtered = self.segment_and_filter_redundant_data('DistanceFitbit', 'Minerals', 'P (mmol/l)')
 
 
         self.new_data = {}
@@ -75,7 +75,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         p1.yaxis[0].major_label_text_color = "navy"
         p1.yaxis[1].major_label_text_color = "green"
         p1.yaxis[0].axis_label = "DistanceFitbit"
-        p1.yaxis[1].axis_label = "Leukocites (G/L)"
+        p1.yaxis[1].axis_label = "P (mmol/l)"
         p1.toolbar_location = None
 
             # a RangeTool for interactive range selection on the x-axis.
@@ -101,7 +101,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         p2.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
 
         p2.xaxis.axis_label = "DistanceFitbit"
-        p2.yaxis.axis_label = "Leukocites"
+        p2.yaxis.axis_label = "P (mmol/l)"
 
             # remove the toolbar from the plot, making it non-interactive
         p2.toolbar_location = None
