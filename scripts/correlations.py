@@ -10,6 +10,8 @@ from datetime import datetime
 from datetime import date
 from scripts.data import filter_data
 
+numpy.set_printoptions(threshold=numpy.inf)
+
 ui = {}
 
 val1 = []
@@ -58,10 +60,11 @@ def correlation_analysis(data,metadata,source,relationships):
 
     selected_range = numpy.logical_and(data.index >= datetime.strptime(ui['dt_pckr_start'].value,"%Y-%m-%d"),data.index <= datetime.strptime(ui['dt_pckr_end'].value,"%Y-%m-%d")) 
     #prepare the convolved data
-    sigmas = [2,4,8,16,32,64,128]
+    sigmas = [2,4,8,16,32,64,128,256]
     convolved = []
     for s in sigmas:
         print(s)
+        print(data.loc[selected_range,:].to_numpy().shape)
         convolved.append(filter_data('PastGauss',data.loc[selected_range,:].to_numpy(),s)[1])
 
     for i in range(len(cols)):
@@ -157,11 +160,26 @@ def correlation_analysis(data,metadata,source,relationships):
                     best_dir = None
                 
                     for s in range(len(sigmas)): 
+
                         # first one direction
                         d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,i],y)
+
+                        if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
+                            print(s)
+                            print(x)
+                            print(y)
+                            print(convolved[s][:,i])
+                            print(convolved[s][:,j])
+                            print(len(d1))
+                            print(len(d2))
+                            print(d1)
+                            print(d2)
+
                         if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
 
                             res = scipy.stats.linregress(d1,d2)
+                            if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
+                                print((res.pvalue,res.rvalue))
         
                             if res.pvalue < best_p:
                                     best_p = res.pvalue
@@ -171,8 +189,18 @@ def correlation_analysis(data,metadata,source,relationships):
     
                         # then the second direction
                         d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,j],x)
-                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
+
+                        if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
+                            print(s)
+                            print(len(d1))
+                            print(len(d2))
+                            print(d1)
+                            print(d2)
+
+                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d2)>= 5:
                             res = scipy.stats.linregress(d1,d2)
+                            if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
+                                print((res.pvalue,res.rvalue))
         
                             if res.pvalue < best_p:
                                 best_p = res.pvalue
@@ -335,7 +363,6 @@ def add_to_ignorelist(source,relationships):
 
     source.selected.indices=[]
     set_table(None,None,None,source,relationships)
-    
 
 def panel(data,categories,metadata,relationships,comparison_panel):
 
@@ -375,7 +402,6 @@ def panel(data,categories,metadata,relationships,comparison_panel):
 
     ui['button4'] = Button(label="Add to black list", button_type="success",width=200) 
     ui['button4'].on_click(partial(add_to_blacklist,source=source,relationships=relationships))
-
 
     ui['max_p'] =  Slider(start=0.0, end=0.2, value=0.01, step=0.01, title="maximum p-value",width=200)
     ui['max_p'].on_change('value',partial(set_table,source=source,relationships=relationships))

@@ -201,8 +201,6 @@ def load_blood_tests(api_key,base_id,cache=False):
 
     return blood_tests
 
-
-
 def filter_data(type,data,sig):
     def gaussian(x, sig,mu):
         return numpy.exp(-numpy.power(x-mu, 2.) / (2 * numpy.power(sig, 2.)))
@@ -226,7 +224,10 @@ def filter_data(type,data,sig):
     filtr = fff(ls,sig,int(len(data)/2))
 
     d = numpy.ma.masked_invalid(data)
-    result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0) for i in ls])
+    if len(d.shape) == 1:
+        result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0) for i in ls])
+    else:
+        result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0).filled(numpy.nan) for i in ls])
     return filtr,result
 
 def data_aquisition_overlap(data1,data2):
