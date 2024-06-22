@@ -10,6 +10,8 @@ def create_app(df,metadata,categories,relationships, bldt):
 	eba = scripts.event_based.EventBasedAnalysisPanel(df,categories,metadata,'Event Based Analysis')
 	blt = scripts.blood_tests.BloodTests(bldt, categories, metadata, 'BloodTests')
 	crl_bt = scripts.bloodtests_correlations.BloodTestsCorrelationsPanel(df, bldt, categories, metadata, 'BloodTests Correlations')
+	mp = scripts.model_page.ModelPage(df,metadata)
+
 
 	tabs = Tabs(tabs=[
 		cp.compose_panel(),
@@ -18,6 +20,6 @@ def create_app(df,metadata,categories,relationships, bldt):
 		scripts.relationships.panel(relationships), 
 		blt.compose_panel(),
 		crl_bt.compose_panel(),
-		scripts.model_page.compose_panel(df,metadata)
+		mp.compose_panel()
 		])
 	return tabs
