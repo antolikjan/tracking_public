@@ -1,8 +1,7 @@
 from bokeh.models import Tabs
 import scripts.comparison, scripts.correlations, scripts.relationships, scripts.event_based, scripts.bloodtests_correlations
 import scripts.blood_tests
-
-from bokeh.models import Panel
+import scripts.model_page
 
 def create_app(df,metadata,categories,relationships, bldt):
 	global tabs
@@ -18,8 +17,7 @@ def create_app(df,metadata,categories,relationships, bldt):
 		scripts.correlations.panel(df,categories,metadata,relationships,cp),
 		scripts.relationships.panel(relationships), 
 		blt.compose_panel(),
-		crl_bt.compose_panel()
+		crl_bt.compose_panel(),
+		scripts.model_page.compose_panel(df,metadata)
 		])
 	return tabs
-
-#pridal comment
