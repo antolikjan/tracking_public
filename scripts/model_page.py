@@ -1,5 +1,5 @@
 from functools import partial
-from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool
+from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, CategoricalAxis
 from bokeh.io import curdoc
 from bokeh.plotting import figure
 from bokeh.transform import linear_cmap
@@ -106,13 +106,11 @@ class ModelPage:
         p.hover.tooltips = [("Row, Column", "@y, @x"), ("Value", "@values")]
 
         # Create a detailed view figure
-        detailed_view = figure(title="Detailed View", plot_width=600, plot_height=600)
+        detailed_view = figure(title="Detailed View", plot_width=600, plot_height=600,
+                               x_range=Range1d(0, 15), y_range=Range1d(0, 15),
+                               tools="hover,save,reset", toolbar_location='above')
 
         detailed_view.rect(x='x', y='y', width=1, height=1, source=detailed_source, fill_color=mapper, line_color=None)
-
-        # Link the axes
-        detailed_view.x_range = Range1d(0, 15)
-        detailed_view.y_range = Range1d(0, 15)
 
         # Add a RangeTool to the main heatmap
         range_tool = RangeTool(x_range=detailed_view.x_range, y_range=detailed_view.y_range)
@@ -143,6 +141,13 @@ class ModelPage:
             }
 
             detailed_source.data = detailed_data
+
+            # Update the labels for the detailed view
+            detailed_view.x_range.factors = row_names[min_x:max_x]
+            detailed_view.y_range.factors = column_names[min_y:max_y]
+            detailed_view.xaxis.major_label_orientation = np.pi / 4
+            detailed_view.yaxis.major_label_orientation = np.pi / 4
+
             print(f"Updated detailed source: {detailed_source.data}")
 
         detailed_view.x_range.on_change('start', update_detailed_view)
