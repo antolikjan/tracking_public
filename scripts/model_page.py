@@ -1,5 +1,5 @@
 from functools import partial
-from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, TapTool
+from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, TapTool, Spacer
 from bokeh.io import curdoc
 from bokeh.plotting import figure, show, output_file
 from bokeh.transform import linear_cmap
@@ -7,6 +7,16 @@ from bokeh.layouts import row, column, gridplot
 import numpy as np
 import torch
 import time
+
+from bokeh.io import output_file, show
+from bokeh.plotting import figure
+from bokeh.transform import linear_cmap
+from bokeh.models import ColumnDataSource, ColorBar, HoverTool
+import numpy as np
+import torch
+import numpy
+from bokeh.layouts import column, row
+
 
 # Assume the following imports are present and the model functions are defined elsewhere
 from model.model_code import *
@@ -50,7 +60,7 @@ class ModelPage:
             columns_list = columns.tolist() if hasattr(columns, 'tolist') else list(columns)
 
             # Create the figure
-            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=650, plot_height=650, tools="hover,save,reset")
+            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=600, plot_height=600, tools="hover,save,reset")
 
             # Plot the bar plot
             p.vbar(x=columns_list, top=weights_column, width=0.8, fill_color=mapper)
@@ -64,7 +74,14 @@ class ModelPage:
             # Add hover tool
             p.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
 
-            bar_plots_dict[column_name] = p
+            # Create spacers for centering
+            spacer_left = Spacer(width=100)
+            spacer_right = Spacer(width=100)
+
+            # Create a centered layout for the plot
+            layout = row(spacer_left, p, spacer_right)
+
+            bar_plots_dict[column_name] = layout
 
         return bar_plots_dict
 
@@ -133,8 +150,8 @@ class ModelPage:
         p = figure(title="Neural Network Weights Heatmap", 
                    x_range=row_names_list, 
                    y_range=column_names_list, 
-                   plot_width=1000, 
-                   plot_height=800, 
+                   plot_width=600, 
+                   plot_height=600, 
                    tools="hover,save,reset", 
                    toolbar_location='above')
 
@@ -151,7 +168,7 @@ class ModelPage:
         p.hover.tooltips = [("Row, Column", "@y_labels, @x_labels"), ("Value", "@values")]
 
         # Create a detailed view figure
-        detailed_view = figure(title="Detailed View", plot_width=800, plot_height=800,
+        detailed_view = figure(title="Detailed View", plot_width=600, plot_height=600,
                                x_range=Range1d(0, 15), y_range=Range1d(0, 15),
                                tools="hover,save,reset,tap", toolbar_location='above')
 
@@ -225,3 +242,22 @@ class ModelPage:
 
         # Use a row layout to place the heatmap and detailed view side by side
         self.dynamic_col.children.append(row(p, detailed_view))
+
+        ###
+
+        sorted_columns = sorted(column_names, key=lambda x: alphas_converted_to_array_absolute[column_names.index(x)])
+        alphas_barplot = figure(x_range=sorted_columns, height=600, width=600, title="Alphas", tools="hover")
+        # Plot the data
+        alphas_barplot.vbar(x=column_names, top=alphas_converted_to_array_absolute, width=0.8)
+
+        # Add hover tool
+        alphas_barplot.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
+
+        # Customize plot
+        alphas_barplot.xgrid.grid_line_color = None
+        alphas_barplot.xaxis.major_label_orientation = np.pi /2
+        alphas_barplot.y_range.start = 0
+
+        ###
+        spacer_left = Spacer(width=100)
+        self.dynamic_col.children.append(row(spacer_left, alphas_barplot))
