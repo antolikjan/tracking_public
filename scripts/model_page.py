@@ -3,6 +3,7 @@ from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearCol
 from bokeh.io import curdoc
 from bokeh.plotting import figure
 from bokeh.transform import linear_cmap
+from bokeh.layouts import row
 import numpy as np
 import torch
 import time
@@ -85,10 +86,10 @@ class ModelPage:
 
         # Create the main heatmap figure with Range1d for x_range and y_range
         p = figure(title="Neural Network Weights Heatmap", 
-                   x_range=Range1d(0, len(row_names)), 
-                   y_range=Range1d(0, len(column_names)), 
-                   plot_width=1500, 
-                   plot_height=1000, 
+                   x_range=row_names, 
+                   y_range=column_names, 
+                   plot_width=800, 
+                   plot_height=600, 
                    tools="hover,save,reset", 
                    toolbar_location='above')
 
@@ -110,8 +111,8 @@ class ModelPage:
         detailed_view.rect(x='x', y='y', width=1, height=1, source=detailed_source, fill_color=mapper, line_color=None)
 
         # Link the axes
-        detailed_view.x_range = Range1d(0, 10)
-        detailed_view.y_range = Range1d(0, 10)
+        detailed_view.x_range = Range1d(0, 15)
+        detailed_view.y_range = Range1d(0, 15)
 
         # Add a RangeTool to the main heatmap
         range_tool = RangeTool(x_range=detailed_view.x_range, y_range=detailed_view.y_range)
@@ -149,5 +150,5 @@ class ModelPage:
         detailed_view.y_range.on_change('start', update_detailed_view)
         detailed_view.y_range.on_change('end', update_detailed_view)
 
-        self.dynamic_col.children.append(p)
-        self.dynamic_col.children.append(detailed_view)
+        # Use a row layout to place the heatmap and detailed view side by side
+        self.dynamic_col.children.append(row(p, detailed_view))
