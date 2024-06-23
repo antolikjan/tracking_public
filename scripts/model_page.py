@@ -1,9 +1,9 @@
 from functools import partial
-from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, CategoricalAxis
+from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, TapTool
 from bokeh.io import curdoc
-from bokeh.plotting import figure
+from bokeh.plotting import figure, show, output_file
 from bokeh.transform import linear_cmap
-from bokeh.layouts import row
+from bokeh.layouts import row, column, gridplot
 import numpy as np
 import torch
 import time
@@ -21,6 +21,8 @@ class ModelPage:
         self.ui_elements = {}
         self.dynamic_col = Column()
         self.create_ui_elements()
+        self.bar_plots_dict = self.create_bar_plots()
+        self.current_bar_plot = None
 
     def create_ui_elements(self):
         self.ui_elements['button1'] = Button(label="Start Model", button_type="success", width=200)
@@ -29,6 +31,42 @@ class ModelPage:
 
         self.loader = Div(text="", width=200, height=30)
         self.dynamic_col.children.append(self.loader)
+
+    def create_bar_plots(self):
+        # Convert weights to numpy array and take absolute values
+        weights_converted_to_array = weights_result.detach().numpy()
+        weights_converted_to_array_absolute = np.absolute(weights_converted_to_array)
+
+        bar_plots_dict = {}
+        for idx, column_name in enumerate(columns):
+            # Extract weights for the current column
+            weights_column = weights_converted_to_array_absolute[:, idx]
+
+            # Define the colorscale for the heatmap
+            colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
+            mapper = linear_cmap(field_name='top', palette=colors_reversed, low=weights_column.min(), high=weights_column.max())
+
+            # Ensure columns is a list
+            columns_list = columns.tolist() if hasattr(columns, 'tolist') else list(columns)
+
+            # Create the figure
+            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=650, plot_height=650, tools="hover,save,reset")
+
+            # Plot the bar plot
+            p.vbar(x=columns_list, top=weights_column, width=0.8, fill_color=mapper)
+            p.xaxis.major_label_orientation = np.pi / 2
+            p.y_range.start = 0
+
+            # Add color bar
+            color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0, 0))
+            p.add_layout(color_bar, 'right')
+
+            # Add hover tool
+            p.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
+
+            bar_plots_dict[column_name] = p
+
+        return bar_plots_dict
 
     def compose_panel(self):
         panel = Panel(child=self.dynamic_col, title="Model Page")
@@ -88,16 +126,20 @@ class ModelPage:
         mapper = linear_cmap(field_name='values', palette=colors_reversed, low=weights_matrix.min(), high=weights_matrix.max())
 
         # Create the main heatmap figure with Range1d for x_range and y_range
+        # Ensure row_names is a list
+        row_names_list = row_names.tolist() if hasattr(row_names, 'tolist') else list(row_names)
+        column_names_list = column_names.tolist() if hasattr(column_names, 'tolist') else list(column_names)
+
         p = figure(title="Neural Network Weights Heatmap", 
-                   x_range=row_names, 
-                   y_range=column_names, 
+                   x_range=row_names_list, 
+                   y_range=column_names_list, 
                    plot_width=1000, 
                    plot_height=800, 
                    tools="hover,save,reset", 
                    toolbar_location='above')
 
         # Plot the heatmap
-        p.rect(x='x', y='y', width=0.8, height=0.9, source=source, fill_color=mapper, line_color=None)
+        r = p.rect(x='x', y='y', width=0.8, height=0.9, source=source, fill_color=mapper, line_color=None)
 
         # Add color bar
         color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0, 0))
@@ -111,9 +153,15 @@ class ModelPage:
         # Create a detailed view figure
         detailed_view = figure(title="Detailed View", plot_width=800, plot_height=800,
                                x_range=Range1d(0, 15), y_range=Range1d(0, 15),
-                               tools="hover,save,reset", toolbar_location='above')
+                               tools="hover,save,reset,tap", toolbar_location='above')
 
-        detailed_view.rect(x='x', y='y', width=0.8, height=0.9, source=detailed_source, fill_color=mapper, line_color=None)
+        r_detailed = detailed_view.rect(x='x', y='y', width=0.8, height=0.9, source=detailed_source, fill_color=mapper, line_color=None)
+
+        # Disable selection visual effects
+        r.selection_glyph = None
+        r.nonselection_glyph = None
+        r_detailed.selection_glyph = None
+        r_detailed.nonselection_glyph = None
 
         # Add a RangeTool to the main heatmap
         range_tool = RangeTool(x_range=detailed_view.x_range, y_range=detailed_view.y_range)
@@ -141,13 +189,12 @@ class ModelPage:
                 'x': np.tile(range(min_x, max_x), max_y - min_y),
                 'y': np.repeat(range(min_y, max_y), max_x - min_x),
                 'values': weights_matrix[min_y:max_y, min_x:max_x].flatten(),
-                'x_labels': np.tile(row_names[min_x:max_x], len(row_names[min_x:max_x])),
-                'y_labels': np.repeat(column_names[min_y:max_y], len(column_names[min_y:max_y]))
+                'x_labels': np.tile(row_names[min_x:max_x], max_y - min_y),
+                'y_labels': np.repeat(column_names[min_y:max_y], max_x - min_x)
             }
-
             detailed_source.data = detailed_data
-            print(f"Updated detailed source: {detailed_source.data}")
 
+        # Attach the callback to the range changes
         detailed_view.x_range.on_change('start', update_detailed_view)
         detailed_view.x_range.on_change('end', update_detailed_view)
         detailed_view.y_range.on_change('start', update_detailed_view)
@@ -158,6 +205,23 @@ class ModelPage:
             ("Column Label", "@x_labels"),
             ("Value", "@values")
         ]
+
+        # TapTool callback
+        def on_tap(event):
+            indices = detailed_source.selected.indices
+            if indices:
+                index = indices[0]
+                column_name = detailed_source.data['x_labels'][index]
+                print(f"Clicked cell - Row: {detailed_source.data['y_labels'][index]}, Column: {column_name}")
+
+                if self.current_bar_plot:
+                    self.dynamic_col.children.remove(self.current_bar_plot)
+
+                if column_name in self.bar_plots_dict:
+                    self.current_bar_plot = self.bar_plots_dict[column_name]
+                    self.dynamic_col.children.append(self.current_bar_plot)
+
+        detailed_view.on_event('tap', on_tap)
 
         # Use a row layout to place the heatmap and detailed view side by side
         self.dynamic_col.children.append(row(p, detailed_view))
