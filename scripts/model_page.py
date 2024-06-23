@@ -74,7 +74,10 @@ class ModelPage:
         # Prepare data for Bokeh ColumnDataSource
         data = {'y': np.repeat(range(len(column_names)), len(row_names)),
                 'x': np.tile(range(len(row_names)), len(column_names)),
-                'values': weights_matrix.flatten()}
+                'values': weights_matrix.flatten(),
+                'x_labels': np.tile(row_names, len(row_names)),
+                'y_labels': np.repeat(column_names, len(column_names))
+                }
 
         source = ColumnDataSource(data)
         detailed_source = ColumnDataSource(data.copy())  # Separate source for the detailed view
@@ -88,13 +91,13 @@ class ModelPage:
         p = figure(title="Neural Network Weights Heatmap", 
                    x_range=row_names, 
                    y_range=column_names, 
-                   plot_width=800, 
-                   plot_height=600, 
+                   plot_width=1000, 
+                   plot_height=800, 
                    tools="hover,save,reset", 
                    toolbar_location='above')
 
         # Plot the heatmap
-        p.rect(x='x', y='y', width=1, height=1, source=source, fill_color=mapper, line_color=None)
+        p.rect(x='x', y='y', width=0.8, height=0.9, source=source, fill_color=mapper, line_color=None)
 
         # Add color bar
         color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0, 0))
@@ -103,14 +106,14 @@ class ModelPage:
         p.xaxis.major_label_orientation = np.pi / 4
 
         # Add hover tool
-        p.hover.tooltips = [("Row, Column", "@y, @x"), ("Value", "@values")]
+        p.hover.tooltips = [("Row, Column", "@y_labels, @x_labels"), ("Value", "@values")]
 
         # Create a detailed view figure
-        detailed_view = figure(title="Detailed View", plot_width=600, plot_height=600,
+        detailed_view = figure(title="Detailed View", plot_width=800, plot_height=800,
                                x_range=Range1d(0, 15), y_range=Range1d(0, 15),
                                tools="hover,save,reset", toolbar_location='above')
 
-        detailed_view.rect(x='x', y='y', width=1, height=1, source=detailed_source, fill_color=mapper, line_color=None)
+        detailed_view.rect(x='x', y='y', width=0.8, height=0.9, source=detailed_source, fill_color=mapper, line_color=None)
 
         # Add a RangeTool to the main heatmap
         range_tool = RangeTool(x_range=detailed_view.x_range, y_range=detailed_view.y_range)
@@ -137,23 +140,24 @@ class ModelPage:
             detailed_data = {
                 'x': np.tile(range(min_x, max_x), max_y - min_y),
                 'y': np.repeat(range(min_y, max_y), max_x - min_x),
-                'values': weights_matrix[min_y:max_y, min_x:max_x].flatten()
+                'values': weights_matrix[min_y:max_y, min_x:max_x].flatten(),
+                'x_labels': np.tile(row_names[min_x:max_x], len(row_names[min_x:max_x])),
+                'y_labels': np.repeat(column_names[min_y:max_y], len(column_names[min_y:max_y]))
             }
 
             detailed_source.data = detailed_data
-
-            # Update the labels for the detailed view
-            detailed_view.x_range.factors = row_names[min_x:max_x]
-            detailed_view.y_range.factors = column_names[min_y:max_y]
-            detailed_view.xaxis.major_label_orientation = np.pi / 4
-            detailed_view.yaxis.major_label_orientation = np.pi / 4
-
             print(f"Updated detailed source: {detailed_source.data}")
 
         detailed_view.x_range.on_change('start', update_detailed_view)
         detailed_view.x_range.on_change('end', update_detailed_view)
         detailed_view.y_range.on_change('start', update_detailed_view)
         detailed_view.y_range.on_change('end', update_detailed_view)
+
+        detailed_view.hover.tooltips = [
+            ("Row Label", "@y_labels"),
+            ("Column Label", "@x_labels"),
+            ("Value", "@values")
+        ]
 
         # Use a row layout to place the heatmap and detailed view side by side
         self.dynamic_col.children.append(row(p, detailed_view))
