@@ -7,15 +7,7 @@ from bokeh.layouts import row, column, gridplot
 import numpy as np
 import torch
 import time
-
-from bokeh.io import output_file, show
-from bokeh.plotting import figure
-from bokeh.transform import linear_cmap
-from bokeh.models import ColumnDataSource, ColorBar, HoverTool
-import numpy as np
-import torch
-import numpy
-from bokeh.layouts import column, row
+from bokeh.layouts import Row, Column
 
 
 # Assume the following imports are present and the model functions are defined elsewhere
@@ -60,7 +52,7 @@ class ModelPage:
             columns_list = columns.tolist() if hasattr(columns, 'tolist') else list(columns)
 
             # Create the figure
-            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=600, plot_height=600, tools="hover,save,reset")
+            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=675, plot_height=600, tools="hover,save,reset")
 
             # Plot the bar plot
             p.vbar(x=columns_list, top=weights_column, width=0.8, fill_color=mapper)
@@ -75,11 +67,10 @@ class ModelPage:
             p.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
 
             # Create spacers for centering
-            spacer_left = Spacer(width=100)
-            spacer_right = Spacer(width=100)
+            spacer_left = Spacer(width=0)
 
             # Create a centered layout for the plot
-            layout = row(spacer_left, p, spacer_right)
+            layout = row(spacer_left, p)
 
             bar_plots_dict[column_name] = layout
 
@@ -109,15 +100,15 @@ class ModelPage:
         np.set_printoptions(threshold=10_000)
         torch.set_printoptions(threshold=10_000)
 
-        print("---")
+       # print("---")
         weights_converted_to_array = weights.detach().numpy()
         weights_converted_to_array_absolute = np.absolute(weights_converted_to_array)
 
-        print("---")
+      #  print("---")
         alphas_result_converted_to_array = alphas.detach().numpy()
         alphas_converted_to_array_absolute = np.absolute(alphas_result_converted_to_array)
 
-        print("---")
+      #  print("---")
         column_names_converted_to_list = column_names.tolist()
 
         column_names = column_names_converted_to_list  # List of column names
@@ -150,7 +141,7 @@ class ModelPage:
         p = figure(title="Neural Network Weights Heatmap", 
                    x_range=row_names_list, 
                    y_range=column_names_list, 
-                   plot_width=600, 
+                   plot_width=800, 
                    plot_height=600, 
                    tools="hover,save,reset", 
                    toolbar_location='above')
@@ -231,12 +222,23 @@ class ModelPage:
                 column_name = detailed_source.data['x_labels'][index]
                 print(f"Clicked cell - Row: {detailed_source.data['y_labels'][index]}, Column: {column_name}")
 
+                # Safely remove the current bar plot if it exists in any row
                 if self.current_bar_plot:
-                    self.dynamic_col.children.remove(self.current_bar_plot)
+                    for child in self.dynamic_col.children:
+                        if isinstance(child, Row) and self.current_bar_plot in child.children:
+                            child.children.remove(self.current_bar_plot)
+                            break
 
                 if column_name in self.bar_plots_dict:
                     self.current_bar_plot = self.bar_plots_dict[column_name]
-                    self.dynamic_col.children.append(self.current_bar_plot)
+
+                    # Find the row containing the alphas bar plot and update it
+                    for i, child in enumerate(self.dynamic_col.children):
+                        if isinstance(child, Row) and len(child.children) > 1 and child.children[1] == alphas_barplot:
+                            # Update the row to include the current bar plot
+                            new_row = Row(child.children[0], alphas_barplot, self.current_bar_plot)
+                            self.dynamic_col.children[i] = new_row
+                            break
 
         detailed_view.on_event('tap', on_tap)
 
@@ -246,7 +248,7 @@ class ModelPage:
         ###
 
         sorted_columns = sorted(column_names, key=lambda x: alphas_converted_to_array_absolute[column_names.index(x)])
-        alphas_barplot = figure(x_range=sorted_columns, height=600, width=600, title="Alphas", tools="hover")
+        alphas_barplot = figure(x_range=sorted_columns, height=600, width=675, title="Alphas", tools="hover")
         # Plot the data
         alphas_barplot.vbar(x=column_names, top=alphas_converted_to_array_absolute, width=0.8)
 
