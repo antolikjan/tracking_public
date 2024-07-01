@@ -73,18 +73,20 @@ class ModelPage:
             # Extract weights for the current column
             weights_column = weights_converted_to_array_absolute[:, idx]
 
+            # Sort weights and columns together
+            sorted_indices = np.argsort(weights_column)[::-1]
+            sorted_weights = weights_column[sorted_indices]
+            sorted_columns = [columns[i] for i in sorted_indices]
+
             # Define the colorscale for the heatmap
             colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
-            mapper = linear_cmap(field_name='top', palette=colors_reversed, low=weights_column.min(), high=weights_column.max())
-
-            # Ensure columns is a list
-            columns_list = columns.tolist() if hasattr(columns, 'tolist') else list(columns)
+            mapper = linear_cmap(field_name='top', palette=colors_reversed, low=sorted_weights.min(), high=sorted_weights.max())
 
             # Create the figure
-            p = figure(x_range=columns_list, title=f"{column_name} influenced by...", plot_width=675, plot_height=600, tools="hover,save,reset")
+            p = figure(x_range=sorted_columns, title=f"{column_name} influenced by...", plot_width=675, plot_height=600, tools="hover,save,reset")
 
             # Plot the bar plot
-            p.vbar(x=columns_list, top=weights_column, width=0.8, fill_color=mapper)
+            p.vbar(x=sorted_columns, top=sorted_weights, width=0.8, fill_color=mapper)
             p.xaxis.major_label_orientation = np.pi / 2
             p.y_range.start = 0
 
@@ -274,7 +276,7 @@ class ModelPage:
 
         sorted_columns = sorted(column_names, key=lambda x: alphas_converted_to_array_absolute[column_names.index(x)])
         alphas_barplot = figure(x_range=sorted_columns, height=600, width=675, title="Alphas", tools="hover")
-        alphas_barplot.vbar(x=column_names, top=alphas_converted_to_array_absolute, width=0.8)
+        alphas_barplot.vbar(x=sorted_columns, top=[alphas_converted_to_array_absolute[column_names.index(col)] for col in sorted_columns], width=0.8)
 
         alphas_barplot.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
 
