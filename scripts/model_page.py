@@ -1,32 +1,42 @@
 from functools import partial
-from bokeh.models import Panel, Column, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, TapTool, Spacer
+from bokeh.models import Panel, Column, Row, Button, Div, ColumnDataSource, LinearColorMapper, ColorBar, Range1d, RangeTool, Spacer, Select
 from bokeh.io import curdoc
-from bokeh.plotting import figure, show, output_file
+from bokeh.plotting import figure
 from bokeh.transform import linear_cmap
-from bokeh.layouts import row, column, gridplot
+from bokeh.layouts import row, column
 import numpy as np
 import torch
 import time
-from bokeh.layouts import Row, Column
 
-
-# Assume the following imports are present and the model functions are defined elsewhere
 from model.model_code import *
 from model.pretrainedweightsalphas import *
 
 toTrain = False  # When set to False --> it won't be training the model. Set to False for debugging reasons with weights and alphas stored in variables
 
 class ModelPage:
-    def __init__(self, data, metadata):
+    def __init__(self, data, metadata, categories):
         self.data = data
         self.metadata = metadata
+        self.categories = categories
         self.ui_elements = {}
         self.dynamic_col = Column()
+        self.bar_plots_dict_from_select, self.bar_plots_dict_from_on_tap = self.create_bar_plots()
+        self.current_bar_plot_select = None
+        self.current_bar_plot_tap = None
         self.create_ui_elements()
-        self.bar_plots_dict = self.create_bar_plots()
-        self.current_bar_plot = None
 
     def create_ui_elements(self):
+        # Create "Select Category" and "Select Name" widgets
+        self.ui_elements['select_category'] = Select(title="Category", options=list(self.categories.keys()), value='Fitbit')
+        self.ui_elements['select_name'] = Select(title='Name', value='DistanceFitbit', options=list(self.categories['Fitbit']))
+
+        # Update "Name" options based on selected "Category"
+        self.ui_elements['select_category'].on_change('value', self.update_name_options)
+
+        # Create "Show Bar Plot" button
+        self.ui_elements['show_bar_plot'] = Button(label="Show Bar Plot", button_type="success", width=200)
+        self.ui_elements['show_bar_plot'].on_click(self.show_bar_plot)
+
         self.ui_elements['button1'] = Button(label="Start Model", button_type="success", width=200)
         self.ui_elements['button1'].on_click(partial(self.model_started, data=self.data, metadata=self.metadata))
         self.dynamic_col.children.append(self.ui_elements['button1'])
@@ -34,12 +44,31 @@ class ModelPage:
         self.loader = Div(text="", width=200, height=30)
         self.dynamic_col.children.append(self.loader)
 
+    def update_name_options(self, attr, old, new):
+        self.ui_elements['select_name'].options = list(self.categories[new])
+
+    def show_bar_plot(self):
+        selected_name = self.ui_elements['select_name'].value
+        if selected_name in self.bar_plots_dict_from_select:
+            bar_plot = self.bar_plots_dict_from_select[selected_name]
+
+            # Safely remove the current bar plot if it exists in any row
+            if self.current_bar_plot_select:
+                for child in self.dynamic_col.children:
+                    if isinstance(child, Row) and self.current_bar_plot_select in child.children:
+                        child.children.remove(self.current_bar_plot_select)
+                        break
+
+            self.current_bar_plot_select = bar_plot
+            self.dynamic_col.children.append(row(self.current_bar_plot_select))
+
     def create_bar_plots(self):
         # Convert weights to numpy array and take absolute values
         weights_converted_to_array = weights_result.detach().numpy()
         weights_converted_to_array_absolute = np.absolute(weights_converted_to_array)
 
-        bar_plots_dict = {}
+        bar_plots_dict_from_select = {}
+        bar_plots_dict_from_on_tap = {}
         for idx, column_name in enumerate(columns):
             # Extract weights for the current column
             weights_column = weights_converted_to_array_absolute[:, idx]
@@ -72,9 +101,11 @@ class ModelPage:
             # Create a centered layout for the plot
             layout = row(spacer_left, p)
 
-            bar_plots_dict[column_name] = layout
+            bar_plots_dict_from_select[column_name] = layout
 
-        return bar_plots_dict
+            custom_column_name = column_name + "on_tap"
+            bar_plots_dict_from_on_tap[custom_column_name] = layout
+        return bar_plots_dict_from_select, bar_plots_dict_from_on_tap
 
     def compose_panel(self):
         panel = Panel(child=self.dynamic_col, title="Model Page")
@@ -100,15 +131,12 @@ class ModelPage:
         np.set_printoptions(threshold=10_000)
         torch.set_printoptions(threshold=10_000)
 
-       # print("---")
         weights_converted_to_array = weights.detach().numpy()
         weights_converted_to_array_absolute = np.absolute(weights_converted_to_array)
 
-      #  print("---")
         alphas_result_converted_to_array = alphas.detach().numpy()
         alphas_converted_to_array_absolute = np.absolute(alphas_result_converted_to_array)
 
-      #  print("---")
         column_names_converted_to_list = column_names.tolist()
 
         column_names = column_names_converted_to_list  # List of column names
@@ -134,7 +162,6 @@ class ModelPage:
         mapper = linear_cmap(field_name='values', palette=colors_reversed, low=weights_matrix.min(), high=weights_matrix.max())
 
         # Create the main heatmap figure with Range1d for x_range and y_range
-        # Ensure row_names is a list
         row_names_list = row_names.tolist() if hasattr(row_names, 'tolist') else list(row_names)
         column_names_list = column_names.tolist() if hasattr(column_names, 'tolist') else list(column_names)
 
@@ -219,24 +246,24 @@ class ModelPage:
             indices = detailed_source.selected.indices
             if indices:
                 index = indices[0]
-                column_name = detailed_source.data['x_labels'][index]
+                column_name = detailed_source.data['x_labels'][index] + "on_tap" 
                 print(f"Clicked cell - Row: {detailed_source.data['y_labels'][index]}, Column: {column_name}")
 
                 # Safely remove the current bar plot if it exists in any row
-                if self.current_bar_plot:
+                if self.current_bar_plot_tap:
                     for child in self.dynamic_col.children:
-                        if isinstance(child, Row) and self.current_bar_plot in child.children:
-                            child.children.remove(self.current_bar_plot)
+                        if isinstance(child, Row) and self.current_bar_plot_tap in child.children:
+                            child.children.remove(self.current_bar_plot_tap)
                             break
 
-                if column_name in self.bar_plots_dict:
-                    self.current_bar_plot = self.bar_plots_dict[column_name]
+                if column_name in self.bar_plots_dict_from_on_tap:
+                    self.current_bar_plot_tap = self.bar_plots_dict_from_on_tap[column_name]
 
                     # Find the row containing the alphas bar plot and update it
                     for i, child in enumerate(self.dynamic_col.children):
                         if isinstance(child, Row) and len(child.children) > 1 and child.children[1] == alphas_barplot:
                             # Update the row to include the current bar plot
-                            new_row = Row(child.children[0], alphas_barplot, self.current_bar_plot)
+                            new_row = Row(child.children[0], alphas_barplot, self.current_bar_plot_tap)
                             self.dynamic_col.children[i] = new_row
                             break
 
@@ -245,21 +272,24 @@ class ModelPage:
         # Use a row layout to place the heatmap and detailed view side by side
         self.dynamic_col.children.append(row(p, detailed_view))
 
-        ###
-
         sorted_columns = sorted(column_names, key=lambda x: alphas_converted_to_array_absolute[column_names.index(x)])
         alphas_barplot = figure(x_range=sorted_columns, height=600, width=675, title="Alphas", tools="hover")
-        # Plot the data
         alphas_barplot.vbar(x=column_names, top=alphas_converted_to_array_absolute, width=0.8)
 
-        # Add hover tool
         alphas_barplot.hover.tooltips = [("Column", "@x"), ("Value", "@top")]
 
-        # Customize plot
         alphas_barplot.xgrid.grid_line_color = None
-        alphas_barplot.xaxis.major_label_orientation = np.pi /2
+        alphas_barplot.xaxis.major_label_orientation = np.pi / 2
         alphas_barplot.y_range.start = 0
 
-        ###
         spacer_left = Spacer(width=100)
         self.dynamic_col.children.append(row(spacer_left, alphas_barplot))
+
+
+        ###ADD SELECTION&BUTTON UI ELEMENTS###
+        self.dynamic_col.children.append(column(
+            self.ui_elements['select_category'], 
+            self.ui_elements['select_name'], 
+            self.ui_elements['show_bar_plot']
+        ))
+        ###
