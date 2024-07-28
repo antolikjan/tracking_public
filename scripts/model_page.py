@@ -25,8 +25,9 @@ class ModelPage:
         self.current_alpha_bar_plot_select = None
 
         self.current_bar_plot_tap = None
-        self.current_alpha_bar_plot_tap=None
+        self.current_alpha_bar_plot_tap = None
         self.create_ui_elements()
+        self.setup_layout()
 
     def create_ui_elements(self):
         # Create "Select Category" and "Select Name" widgets
@@ -42,10 +43,8 @@ class ModelPage:
 
         self.ui_elements['button1'] = Button(label="Start Model", button_type="success", width=200)
         self.ui_elements['button1'].on_click(partial(self.model_started, data=self.data, metadata=self.metadata))
-        self.dynamic_col.children.append(self.ui_elements['button1'])
 
         self.loader = Div(text="", width=200, height=30)
-        self.dynamic_col.children.append(self.loader)
 
     def update_name_options(self, attr, old, new):
         self.ui_elements['select_name'].options = list(self.categories[new])
@@ -54,22 +53,39 @@ class ModelPage:
         selected_name = self.ui_elements['select_name'].value
         if selected_name in self.weight_on_select:
             bar_plot = self.weight_on_select[selected_name]
-            alpha_bar_plot=self.alpha_on_select[selected_name]
+            alpha_bar_plot = self.alpha_on_select[selected_name]
 
-            # Safely remove the current bar plot if it exists in any row
+            # Safely remove the current bar plot if it exists in the bar_row
             if self.current_bar_plot_select:
-                for child in self.dynamic_col.children:
-                    if isinstance(child, Row):
-                        if self.current_bar_plot_select in child.children:
-                            child.children.remove(self.current_bar_plot_select)
-                        if self.current_alpha_bar_plot_select in child.children:
-                            child.children.remove(self.current_alpha_bar_plot_select)
-            # self.current_bar_plot_select = None
-            # self.current_alpha_bar_plot_select = None
+                if self.current_bar_plot_select in self.bar_row.children:
+                    self.bar_row.children.remove(self.current_bar_plot_select)
+                if self.current_alpha_bar_plot_select in self.bar_row.children:
+                    self.bar_row.children.remove(self.current_alpha_bar_plot_select)
 
             self.current_bar_plot_select = bar_plot
             self.current_alpha_bar_plot_select = alpha_bar_plot
-            self.dynamic_col.children.append(row(bar_plot, alpha_bar_plot))
+            self.bar_row.children.append(bar_plot)
+            self.bar_row.children.append(alpha_bar_plot)
+
+    def setup_layout(self):
+        # Setup layout with named rows
+        self.tap_row = Row(name="tap_row")
+
+        self.dynamic_col.children.append(self.ui_elements['button1'])
+        self.dynamic_col.children.append(self.loader)
+
+        # Use a row layout to place the heatmap and detailed view side by side
+        self.heatmaps_row = Row(name="heatmaps")
+        self.dynamic_col.children.append(self.heatmaps_row)
+
+        self.dynamic_col.children.append(self.tap_row)
+
+        ### ADD A DIVIDER LINE AND SELECT UI ELEMENTS ###
+        self.select_row = Row(name="selectrow")
+        self.dynamic_col.children.append(self.select_row)
+
+        self.bar_row = Row(name="bar_row")
+        self.dynamic_col.children.append(self.bar_row)
 
     def create_bar_plots(self):
         # Convert weights to numpy array and take absolute values
@@ -119,9 +135,8 @@ class ModelPage:
 
             weight_on_select[column_name] = layout
 
-            ##ALPHAS
+            ## ALPHAS
             print(sorted_columns)
-            #sorted_columns = list(self.alpha_on_tap[column_name[0]+"on_tap"]) #dummy default --> doesnt work it was previouslu columnnames[0] or somethiong like that therefore "Sys_Diaon_tap"
             print(f"initial print of sorted columns: {sorted_columns}")
             alphas_barplot = figure(x_range=sorted_columns, height=600, width=675, title="Alphas", tools="hover")
             alphas_barplot.vbar(x=sorted_columns, top=[alphas_converted_to_array_absolute[sorted_columns.index(col)] for col in sorted_columns], width=0.8)
@@ -131,17 +146,15 @@ class ModelPage:
             alphas_barplot.xgrid.grid_line_color = None
             alphas_barplot.xaxis.major_label_orientation = np.pi / 2
             alphas_barplot.y_range.start = 0
-            ###
 
-            layput_alpha = alphas_barplot
-            
+            layout_alpha = alphas_barplot
 
-            alpha_on_select[column_name] = layput_alpha
+            alpha_on_select[column_name] = layout_alpha
 
             custom_column_name = column_name + "on_tap"
             weight_on_tap[custom_column_name] = layout
 
-            alpha_on_tap[custom_column_name] = layput_alpha
+            alpha_on_tap[custom_column_name] = layout_alpha
 
         return weight_on_select, weight_on_tap, alpha_on_select, alpha_on_tap
 
@@ -200,12 +213,12 @@ class ModelPage:
         row_names_list = row_names.tolist() if hasattr(row_names, 'tolist') else list(row_names)
         column_names_list = column_names.tolist() if hasattr(column_names, 'tolist') else list(column_names)
 
-        p = figure(title="Neural Network Weights Heatmap", 
-                   x_range=row_names_list, 
-                   y_range=column_names_list, 
-                   plot_width=800, 
-                   plot_height=600, 
-                   tools="hover,save,reset", 
+        p = figure(title="Neural Network Weights Heatmap",
+                   x_range=row_names_list,
+                   y_range=column_names_list,
+                   plot_width=800,
+                   plot_height=600,
+                   tools="hover,save,reset",
                    toolbar_location='above')
 
         # Plot the heatmap
@@ -284,24 +297,17 @@ class ModelPage:
                 column_name = detailed_source.data['x_labels'][index] + "on_tap"
                 print(f"Clicked cell - Row: {detailed_source.data['y_labels'][index]}, Column: {column_name}")
 
-                print("Children before removal:", len(self.dynamic_col.children))
+                print("Children before removal:", len(self.tap_row.children))
                 # Safely remove the current bar plots if they exist
                 if self.current_bar_plot_tap:
-                    # Iterate through children to safely remove existing plots
-                    for child in self.dynamic_col.children:
-                        if isinstance(child, Row):
-                            # Check if the current bar plots are in the child
-                            if self.current_bar_plot_tap in child.children:
-                                child.children.remove(self.current_bar_plot_tap)
-                            if self.current_alpha_bar_plot_tap in child.children:
-                                child.children.remove(self.current_alpha_bar_plot_tap)
+                    if self.current_bar_plot_tap in self.tap_row.children:
+                        self.tap_row.children.remove(self.current_bar_plot_tap)
+                    if self.current_alpha_bar_plot_tap in self.tap_row.children:
+                        self.tap_row.children.remove(self.current_alpha_bar_plot_tap)
 
-                # Clear references to ensure they aren't reused
                 self.current_bar_plot_tap = None
                 self.current_alpha_bar_plot_tap = None
-                #self.current_alpha_bar_plot_select = None
-                # Removal logic here
-                print("Children after removal:", len(self.dynamic_col.children))
+                print("Children after removal:", len(self.tap_row.children))
 
                 # Check if the column is in weight_on_tap
                 if column_name in self.weight_on_tap:
@@ -309,24 +315,23 @@ class ModelPage:
                     self.current_alpha_bar_plot_tap = self.alpha_on_tap[column_name]
 
                     # Update the layout to include the new plots in the correct location
-                    self.dynamic_col.children.append(
-                        row(self.current_bar_plot_tap, self.current_alpha_bar_plot_tap),  # Show detailed view and alpha plot
-                    )
+                    self.tap_row.children.append(self.current_bar_plot_tap)
+                    self.tap_row.children.append(self.current_alpha_bar_plot_tap)
 
         # Assign the tap event handler
         detailed_view.on_event('tap', on_tap)
-        
-        # Use a row layout to place the heatmap and detailed view side by side
-        self.dynamic_col.children.append(row(p, detailed_view))
+        self.heatmaps_row.children.append(column(Div(text="<hr><h4>GENERAL OVERVIEW: Click on a column for a specific parameter. 'X' is predicted by...</h4>", width=400),row(p, detailed_view)))
 
-        spacer_left = Spacer(width=100)
-        #self.dynamic_col.children.append(row(spacer_left, alphas_barplot))
+       # self.select_row.children.append()
 
-
-        ###ADD SELECTION&BUTTON UI ELEMENTS###
-        self.dynamic_col.children.append(column(
-            self.ui_elements['select_category'], 
-            self.ui_elements['select_name'], 
+        self.select_row.children.append(column(
+            Div(text="<hr><h4>DETAILED SELECTION: Select specific parameter. 'X' is predicted by...</h4>", width=400),
+            self.ui_elements['select_category'],
+            self.ui_elements['select_name'],
             self.ui_elements['show_bar_plot']
         ))
-        ###
+
+        
+
+
+        
