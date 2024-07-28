@@ -164,17 +164,6 @@ def correlation_analysis(data,metadata,source,relationships):
                         # first one direction
                         d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,i],y)
 
-                        if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
-                            print(s)
-                            print(x)
-                            print(y)
-                            print(convolved[s][:,i])
-                            print(convolved[s][:,j])
-                            print(len(d1))
-                            print(len(d2))
-                            print(d1)
-                            print(d2)
-
                         if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
 
                             res = scipy.stats.linregress(d1,d2)
@@ -190,17 +179,8 @@ def correlation_analysis(data,metadata,source,relationships):
                         # then the second direction
                         d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,j],x)
 
-                        if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
-                            print(s)
-                            print(len(d1))
-                            print(len(d2))
-                            print(d1)
-                            print(d2)
-
                         if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d2)>= 5:
                             res = scipy.stats.linregress(d1,d2)
-                            if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
-                                print((res.pvalue,res.rvalue))
         
                             if res.pvalue < best_p:
                                 best_p = res.pvalue
@@ -312,8 +292,6 @@ def update_selection(attr, old, new,categories):
     ui["select_variable"].options = list(categories[ui["select_category"].value])
 
 def show_which(attr, old, new,categories,source,relationships):
-    print(old)
-    print(new)
     if new == 0:
        if len(ui['RightColumn'].children) == 2:
           ui['RightColumn'].children.pop()

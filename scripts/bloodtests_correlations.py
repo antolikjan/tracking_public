@@ -120,13 +120,13 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         """
         spacer1 = Spacer(width = 260, height=90)
 
-         # widgets of variable 1 
+        # widgets of variable 1 
         widgets_var1 = Column(Div(text="""<b>Variable 1</b>"""), self.ui_elements["select_category"], self.ui_elements["select_variable1"], sizing_mode="fixed", width=120, height=500)
-         # widgets of variable 2
+        # widgets of variable 2
         widgets_var2 = Column(Div(text="""<b>Variable 2</b>"""), self.ui_elements["select_view"], self.ui_elements["select_variable2"], sizing_mode="fixed", width=120, height=500)
         spacer2 = Spacer(width=20, height=40)
 
-         # segmentation slider bar widget
+        # segmentation slider bar widget
         widgets_var3 = Column(Div(text="""<b>Segmentation Range</b>"""), self.ui_elements["select_segmentation"], sizing_mode="fixed", width=260, height=500)
         spacer3 = Spacer(width=40, height=70)
         horiz_spacer = Spacer(width = 20)

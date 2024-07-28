@@ -10,6 +10,6 @@ blood_tests = load_blood_tests(api_key=cf.config['airtable_api_key'],base_id=cf.
 
 df,metadata,categories = load_tables(cf.config['tables_to_load'],api_key=cf.config['airtable_api_key'],base_id=cf.config['airtable_base_id'],cache=cache)
 
-rm = RelationshipMetadata(metadata,initialize=True)
+rm = RelationshipMetadata(metadata,initialize=False)
 
 curdoc().add_root(create_app(df,metadata,categories,rm, blood_tests))

@@ -6,6 +6,7 @@ import pickle
 import math
 from functools import partial
 from pyairtable import Table
+from scripts.data_enrichment import enrich_data
 
 def load_tables(table_names,api_key,base_id,cache=False):
     """
@@ -52,6 +53,9 @@ def load_tables(table_names,api_key,base_id,cache=False):
         # convert bool columns to float
         for col in df.columns:
             if md['Units'].loc[col] == 'bool':
+                print(col)
+                print(type(df[col]))
+                print(df[col])
                 df[col] = pd.to_numeric(df[col])
 
         # convert enum columns to numbers
@@ -135,6 +139,9 @@ def load_tables(table_names,api_key,base_id,cache=False):
     categories = {}
     for category in table_names:
         categories[category] = [i for i in md.loc[md['Category'] == category].index.tolist() if i in df.columns]
+
+    # enrich data with additional computed columns (see data_enrichment.py)
+    enrich_data(df,categories,md)
     
     return df,md,categories
 
