@@ -107,6 +107,7 @@ class ModelPage:
             sorted_indices = np.argsort(weights_column)[::-1]
             sorted_weights = weights_column[sorted_indices]
             sorted_columns = [columns[i] for i in sorted_indices]
+            sorted_columns = sorted_columns[:len(sorted_columns)//2]
 
             # Define the colorscale for the heatmap
             colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
