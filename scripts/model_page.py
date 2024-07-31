@@ -20,6 +20,7 @@ class ModelPage:
         self.categories = categories
         self.ui_elements = {}
         self.dynamic_col = Column()
+        self.slice_percentage = 50  # Default slice percentage
         self.weight_on_select, self.weight_on_tap, self.alpha_on_select, self.alpha_on_tap = self.create_bar_plots()
         self.current_bar_plot_select = None
         self.current_alpha_bar_plot_select = None
@@ -43,6 +44,10 @@ class ModelPage:
 
         self.ui_elements['button1'] = Button(label="Start Model", button_type="success", width=200)
         self.ui_elements['button1'].on_click(partial(self.model_started, data=self.data, metadata=self.metadata))
+
+        # Create selection widget for slice percentage
+        self.ui_elements['slice_percentage'] = Select(title="Slice Percentage", options=['50%', '75%', '100%'], value='50%')
+        self.ui_elements['slice_percentage'].on_change('value', self.update_slice_percentage)
 
         self.loader = Div(text="", width=200, height=30)
 
@@ -87,6 +92,10 @@ class ModelPage:
         self.bar_row = Row(name="bar_row")
         self.dynamic_col.children.append(self.bar_row)
 
+    def update_slice_percentage(self, attr, old, new):
+        self.slice_percentage = int(new.strip('%'))
+        self.weight_on_select, self.weight_on_tap, self.alpha_on_select, self.alpha_on_tap = self.create_bar_plots()
+
     def create_bar_plots(self):
         # Convert weights to numpy array and take absolute values
         weights_converted_to_array = weights_result.detach().numpy()
@@ -107,7 +116,10 @@ class ModelPage:
             sorted_indices = np.argsort(weights_column)[::-1]
             sorted_weights = weights_column[sorted_indices]
             sorted_columns = [columns[i] for i in sorted_indices]
-            sorted_columns = sorted_columns[:len(sorted_columns)//2]
+
+            # Slice sorted_columns based on the selected percentage
+            slice_index = int(len(sorted_columns) * self.slice_percentage / 100)
+            sorted_columns = sorted_columns[:slice_index]
 
             # Define the colorscale for the heatmap
             colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
@@ -117,7 +129,7 @@ class ModelPage:
             p = figure(x_range=sorted_columns, title=f"{column_name} influenced by...", plot_width=675, plot_height=600, tools="hover,save,reset")
 
             # Plot the bar plot
-            p.vbar(x=sorted_columns, top=sorted_weights, width=0.8, fill_color=mapper)
+            p.vbar(x=sorted_columns, top=sorted_weights[:slice_index], width=0.8, fill_color=mapper)
             p.xaxis.major_label_orientation = np.pi / 2
             p.y_range.start = 0
 
@@ -137,8 +149,6 @@ class ModelPage:
             weight_on_select[column_name] = layout
 
             ## ALPHAS
-            print(sorted_columns)
-            print(f"initial print of sorted columns: {sorted_columns}")
             alphas_barplot = figure(x_range=sorted_columns, height=600, width=675, title="Alphas", tools="hover")
             alphas_barplot.vbar(x=sorted_columns, top=[alphas_converted_to_array_absolute[sorted_columns.index(col)] for col in sorted_columns], width=0.8)
 
@@ -321,18 +331,14 @@ class ModelPage:
 
         # Assign the tap event handler
         detailed_view.on_event('tap', on_tap)
-        self.heatmaps_row.children.append(column(Div(text="<hr><h4>GENERAL OVERVIEW: Click on a column for a specific parameter. 'X' is predicted by...</h4>", width=400),row(p, detailed_view)))
+        self.heatmaps_row.children.append(column(Div(text="<hr><h4>GENERAL OVERVIEW: Click on a column for a specific parameter. </h4>", width=800),row(p, detailed_view)))
 
        # self.select_row.children.append()
 
         self.select_row.children.append(column(
-            Div(text="<hr><h4>DETAILED SELECTION: Select specific parameter. 'X' is predicted by...</h4>", width=400),
+            Div(text="<hr><h4>DETAILED SELECTION: Select specific parameter.</h4>", width=800),
             self.ui_elements['select_category'],
             self.ui_elements['select_name'],
+            self.ui_elements['slice_percentage'],  # Add the slice percentage selection
             self.ui_elements['show_bar_plot']
         ))
-
-        
-
-
-        
