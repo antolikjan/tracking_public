@@ -11,8 +11,6 @@ import time
 from model.model_code import *
 from model.pretrainedweightsalphas import *
 
-toTrain = False  # When set to False --> it won't be training the model. Set to False for debugging reasons with weights and alphas stored in variables
-
 class ModelPage:
     def __init__(self, data, metadata, categories):
         self.data = data
@@ -20,7 +18,7 @@ class ModelPage:
         self.categories = categories
         self.ui_elements = {}
         self.dynamic_col = Column()
-        self.slice_percentage = 50  # Default slice percentage
+        self.number_of_bars_to_show = ("Specific",25)
         self.weight_on_select, self.weight_on_tap, self.alpha_on_select, self.alpha_on_tap = self.create_bar_plots()
         self.current_bar_plot_select = None
         self.current_alpha_bar_plot_select = None
@@ -30,10 +28,13 @@ class ModelPage:
         self.create_ui_elements()
         self.setup_layout()
 
+        self.detailed_source = None
+        self.toTrain = False
+
     def create_ui_elements(self):
         # Create "Select Category" and "Select Name" widgets
-        self.ui_elements['select_category'] = Select(title="Category", options=list(self.categories.keys()), value='Fitbit')
-        self.ui_elements['select_name'] = Select(title='Name', value='DistanceFitbit', options=list(self.categories['Fitbit']))
+        self.ui_elements['select_category'] = Select(title="Category", options=list(self.categories.keys()), value='Fitbit', width=200)
+        self.ui_elements['select_name'] = Select(title='Name', value='DistanceFitbit', options=list(self.categories['Fitbit']), width=200)
 
         # Update "Name" options based on selected "Category"
         self.ui_elements['select_category'].on_change('value', self.update_name_options)
@@ -46,13 +47,24 @@ class ModelPage:
         self.ui_elements['button1'].on_click(partial(self.model_started, data=self.data, metadata=self.metadata))
 
         # Create selection widget for slice percentage
-        self.ui_elements['slice_percentage'] = Select(title="Slice Percentage", options=['50%', '75%', '100%'], value='50%')
-        self.ui_elements['slice_percentage'].on_change('value', self.update_slice_percentage)
+        self.ui_elements['number_of_bars_to_show'] = Select(title="Number of bars to show", options=['25','30','40','50','All'], width=200)
+        self.ui_elements['number_of_bars_to_show'].on_change('value', self.update_number_of_bars_to_show)
+
+        self.ui_elements['rerender'] = Button(label="Rerender changes", button_type="success", width=200, margin = (24, 5, 0, 0))
+        self.ui_elements['rerender'].on_click(self.rerender)
+
+        # Create selection widget for train yes/no
+        self.ui_elements['to_train'] = Select(title="Train Model?", options=['No - use cached data','Yes'], width=200)
+        self.ui_elements['to_train'].on_change('value', self.update_to_train)
 
         self.loader = Div(text="", width=200, height=30)
 
     def update_name_options(self, attr, old, new):
         self.ui_elements['select_name'].options = list(self.categories[new])
+
+    def rerender(self):
+        self.show_bar_plot()
+        self.on_tap()
 
     def show_bar_plot(self):
         selected_name = self.ui_elements['select_name'].value
@@ -60,7 +72,7 @@ class ModelPage:
             bar_plot = self.weight_on_select[selected_name]
             alpha_bar_plot = self.alpha_on_select[selected_name]
 
-            # Safely remove the current bar plot if it exists in the bar_row
+            #Remove the current bar plot if it exists in the bar_row
             if self.current_bar_plot_select:
                 if self.current_bar_plot_select in self.bar_row.children:
                     self.bar_row.children.remove(self.current_bar_plot_select)
@@ -72,12 +84,46 @@ class ModelPage:
             self.bar_row.children.append(bar_plot)
             self.bar_row.children.append(alpha_bar_plot)
 
+    # TapTool callback
+    def on_tap(self):
+        if self.detailed_source is not None:
+            indices = self.detailed_source.selected.indices
+            if indices:
+                index = indices[0]
+                column_name = self.detailed_source.data['x_labels'][index] + "on_tap"
+                print(f"Clicked cell - Row: {self.detailed_source.data['y_labels'][index]}, Column: {column_name}")
+
+                print("Children before removal:", len(self.tap_row.children))
+                # Safely remove the current bar plots if they exist
+                if self.current_bar_plot_tap:
+                    if self.current_bar_plot_tap in self.tap_row.children:
+                        self.tap_row.children.remove(self.current_bar_plot_tap)
+                    if self.current_alpha_bar_plot_tap in self.tap_row.children:
+                        self.tap_row.children.remove(self.current_alpha_bar_plot_tap)
+
+                self.current_bar_plot_tap = None
+                self.current_alpha_bar_plot_tap = None
+                print("Children after removal:", len(self.tap_row.children))
+
+                # Check if the column is in weight_on_tap
+                if column_name in self.weight_on_tap:
+                    self.current_bar_plot_tap = self.weight_on_tap[column_name]
+                    self.current_alpha_bar_plot_tap = self.alpha_on_tap[column_name]
+
+                    # Update the layout to include the new plots in the correct location
+                    self.tap_row.children.append(self.current_bar_plot_tap)
+                    self.tap_row.children.append(self.current_alpha_bar_plot_tap)
+
     def setup_layout(self):
         # Setup layout with named rows
         self.tap_row = Row(name="tap_row")
 
+        self.dynamic_col.children.append(self.ui_elements['to_train'])
         self.dynamic_col.children.append(self.ui_elements['button1'])
         self.dynamic_col.children.append(self.loader)
+
+        self.general_UI_setting_row = Row(name="generalui")
+        self.dynamic_col.children.append(self.general_UI_setting_row)
 
         # Use a row layout to place the heatmap and detailed view side by side
         self.heatmaps_row = Row(name="heatmaps")
@@ -92,9 +138,18 @@ class ModelPage:
         self.bar_row = Row(name="bar_row")
         self.dynamic_col.children.append(self.bar_row)
 
-    def update_slice_percentage(self, attr, old, new):
-        self.slice_percentage = int(new.strip('%'))
+    def update_number_of_bars_to_show(self, attr, old, new):
+        if new == "All":
+            self.number_of_bars_to_show = ("All",0)
+        else:
+            self.number_of_bars_to_show = ("Specific",int(new))
         self.weight_on_select, self.weight_on_tap, self.alpha_on_select, self.alpha_on_tap = self.create_bar_plots()
+
+    def update_to_train(self, attr, old, new):
+        if new == "Yes":
+            self.toTrain = True
+        else:
+            self.toTrain = False
 
     def create_bar_plots(self):
         # Convert weights to numpy array and take absolute values
@@ -116,10 +171,12 @@ class ModelPage:
             sorted_indices = np.argsort(weights_column)[::-1]
             sorted_weights = weights_column[sorted_indices]
             sorted_columns = [columns[i] for i in sorted_indices]
-
-            # Slice sorted_columns based on the selected percentage
-            slice_index = int(len(sorted_columns) * self.slice_percentage / 100)
-            sorted_columns = sorted_columns[:slice_index]
+            numberofbars = len(sorted_columns)
+            # Slice sorted_columns based on the selected numebr of bars to show
+            if self.number_of_bars_to_show[0]=="Specific":
+                if self.number_of_bars_to_show[1] <= len(sorted_columns):
+                    numberofbars=self.number_of_bars_to_show[1]
+                    sorted_columns = sorted_columns[:numberofbars]   
 
             # Define the colorscale for the heatmap
             colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
@@ -129,7 +186,7 @@ class ModelPage:
             p = figure(x_range=sorted_columns, title=f"{column_name} influenced by...", plot_width=675, plot_height=600, tools="hover,save,reset")
 
             # Plot the bar plot
-            p.vbar(x=sorted_columns, top=sorted_weights[:slice_index], width=0.8, fill_color=mapper)
+            p.vbar(x=sorted_columns, top=sorted_weights[:numberofbars], width=0.8, fill_color=mapper)
             p.xaxis.major_label_orientation = np.pi / 2
             p.y_range.start = 0
 
@@ -179,7 +236,7 @@ class ModelPage:
         curdoc().add_next_tick_callback(partial(self.run_model_callback, data, metadata))
 
     def run_model_callback(self, data, metadata):
-        if toTrain:
+        if self.toTrain:
             print("Training started...")
             column_names, weights, alphas = run_model(data, metadata)
         else:
@@ -190,6 +247,9 @@ class ModelPage:
 
         self.loader.text = "Done!"
 
+
+        self.general_UI_setting_row.children.append(column(Div(text="<hr><h4>GLOBAL UI settings: Select number of bars to be displayed for detailed views</h4>", width=800),row(self.ui_elements['number_of_bars_to_show'],self.ui_elements['rerender'])))
+                                                   
         np.set_printoptions(threshold=10_000)
         torch.set_printoptions(threshold=10_000)
 
@@ -198,10 +258,11 @@ class ModelPage:
 
         column_names_converted_to_list = column_names.tolist()
 
-        column_names = column_names_converted_to_list  # List of column names
-        weights_matrix = weights_converted_to_array_absolute  # ALERT: THIS IS THE WEIGHT MATRIX CONVERTED TO ABSOLUTE VALUES
+        #Column names and corresponding weights matrix of the model
+        column_names = column_names_converted_to_list 
+        weights_matrix = weights_converted_to_array_absolute  
 
-        # Create a list of row names (assuming row names are the same as column names)
+        # Create a list of row names (assuming row names order is the same as column names)
         row_names = column_names
 
         # Prepare data for Bokeh ColumnDataSource
@@ -213,7 +274,7 @@ class ModelPage:
                 }
 
         source = ColumnDataSource(data)
-        detailed_source = ColumnDataSource(data.copy())  # Separate source for the detailed view
+        self.detailed_source = ColumnDataSource(data.copy())  # Separate source for the detailed view
 
         # Define the colorscale for the heatmap
         colors_reversed = ['#F9F871', '#A2F07F', '#49D869', '#1EA087', '#277F8E', '#365A8C', '#46327E', '#440154']
@@ -239,6 +300,7 @@ class ModelPage:
         color_bar = ColorBar(color_mapper=mapper['transform'], width=8, location=(0, 0))
         p.add_layout(color_bar, 'right')
 
+        #Adjust labels
         p.xaxis.major_label_orientation = np.pi / 4
 
         # Add hover tool
@@ -249,7 +311,7 @@ class ModelPage:
                                x_range=Range1d(0, 15), y_range=Range1d(0, 15),
                                tools="hover,save,reset,tap", toolbar_location='above')
 
-        r_detailed = detailed_view.rect(x='x', y='y', width=0.8, height=0.9, source=detailed_source, fill_color=mapper, line_color=None)
+        r_detailed = detailed_view.rect(x='x', y='y', width=0.8, height=0.9, source=self.detailed_source, fill_color=mapper, line_color=None)
 
         # Disable selection visual effects
         r.selection_glyph = None
@@ -286,7 +348,7 @@ class ModelPage:
                 'x_labels': np.tile(row_names[min_x:max_x], max_y - min_y),
                 'y_labels': np.repeat(column_names[min_y:max_y], max_x - min_x)
             }
-            detailed_source.data = detailed_data
+            self.detailed_source.data = detailed_data
 
         # Attach the callback to the range changes
         detailed_view.x_range.on_change('start', update_detailed_view)
@@ -300,37 +362,8 @@ class ModelPage:
             ("Value", "@values")
         ]
 
-        # TapTool callback
-        def on_tap(event):
-            indices = detailed_source.selected.indices
-            if indices:
-                index = indices[0]
-                column_name = detailed_source.data['x_labels'][index] + "on_tap"
-                print(f"Clicked cell - Row: {detailed_source.data['y_labels'][index]}, Column: {column_name}")
-
-                print("Children before removal:", len(self.tap_row.children))
-                # Safely remove the current bar plots if they exist
-                if self.current_bar_plot_tap:
-                    if self.current_bar_plot_tap in self.tap_row.children:
-                        self.tap_row.children.remove(self.current_bar_plot_tap)
-                    if self.current_alpha_bar_plot_tap in self.tap_row.children:
-                        self.tap_row.children.remove(self.current_alpha_bar_plot_tap)
-
-                self.current_bar_plot_tap = None
-                self.current_alpha_bar_plot_tap = None
-                print("Children after removal:", len(self.tap_row.children))
-
-                # Check if the column is in weight_on_tap
-                if column_name in self.weight_on_tap:
-                    self.current_bar_plot_tap = self.weight_on_tap[column_name]
-                    self.current_alpha_bar_plot_tap = self.alpha_on_tap[column_name]
-
-                    # Update the layout to include the new plots in the correct location
-                    self.tap_row.children.append(self.current_bar_plot_tap)
-                    self.tap_row.children.append(self.current_alpha_bar_plot_tap)
-
         # Assign the tap event handler
-        detailed_view.on_event('tap', on_tap)
+        detailed_view.on_event('tap', self.on_tap)
         self.heatmaps_row.children.append(column(Div(text="<hr><h4>GENERAL OVERVIEW: Click on a column for a specific parameter. </h4>", width=800),row(p, detailed_view)))
 
        # self.select_row.children.append()
@@ -339,6 +372,5 @@ class ModelPage:
             Div(text="<hr><h4>DETAILED SELECTION: Select specific parameter.</h4>", width=800),
             self.ui_elements['select_category'],
             self.ui_elements['select_name'],
-            self.ui_elements['slice_percentage'],  # Add the slice percentage selection
             self.ui_elements['show_bar_plot']
         ))
