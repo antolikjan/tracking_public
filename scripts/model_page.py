@@ -247,6 +247,14 @@ class ModelPage:
 
         self.loader.text = "Done!"
 
+        # Clear the existing UI elements and layout
+        self.dynamic_col.children.clear()
+
+        # Reset the UI elements
+        self.create_ui_elements()
+
+        # Reinitialize the layout
+        self.setup_layout()
 
         self.general_UI_setting_row.children.append(column(Div(text="<hr><h4>GLOBAL UI settings: Select number of bars to be displayed for detailed views</h4>", width=800),row(self.ui_elements['number_of_bars_to_show'],self.ui_elements['rerender'])))
                                                    

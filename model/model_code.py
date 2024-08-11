@@ -104,7 +104,7 @@ class JanModel(nn.Module):
 def run_model(df,md):
   print('hello STARTING')
   config = {
-    "epochs" : 2000, #povodne: 2000
+    "epochs" : 2000, 
     "lr" : 30*2e-5,
     "sparsness" : 0.003,
   }
