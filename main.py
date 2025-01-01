@@ -2,6 +2,7 @@ from bokeh.io import curdoc
 from scripts.data import load_tables, load_blood_tests
 from scripts.create_app import create_app
 from scripts.relationship_metadata import RelationshipMetadata
+import locals
 import locals.config as cf
 
 cache=False
