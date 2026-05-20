@@ -15,3 +15,8 @@ def enrich_data(df,categories,metadata):
 	df['Weekend'] = df['Week day'].apply(lambda x: 1 if x >= 5 else 0)
 	categories["Measurements"].append("Weekend")
 	metadata.loc["Weekend"]  = {'Category' : 'Measurements','Default' : 0, 'Intervention' : 'Intervention', 'Start of valid records' : pd.to_datetime('16-2-2021')}
+
+	# Add month of a year as number 0-11 (Jan - Dec)
+	df["Month"] = df.index.month 
+	categories["Measurements"].append("Month")
+	metadata.loc["Month"]  = {'Category' : 'Measurements','Default' : 0, 'Intervention' : 'Intervention', 'Start of valid records' : pd.to_datetime('16-2-2021')}

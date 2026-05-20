@@ -8,7 +8,9 @@ def create_app(df,metadata,categories,relationships, bldt):
 	global tabs
 
 	cp = scripts.comparison.ComparisonPanel(df,categories,metadata,'Comparison')
+
 	eba = scripts.event_based.EventBasedAnalysisPanel(df,categories,metadata,'Event Based Analysis')
+
 	blt = scripts.blood_tests.BloodTests(bldt, categories, metadata, 'BloodTests')
 #	crl_bt = scripts.bloodtests_correlations.BloodTestsCorrelationsPanel(df, bldt, categories, metadata, 'BloodTests Correlations')
 
@@ -20,4 +22,5 @@ def create_app(df,metadata,categories,relationships, bldt):
 		blt.compose_panel(),
 #		crl_bt.compose_panel()
 		])
+	print("FINAL")
 	return tabs

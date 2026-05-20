@@ -52,6 +52,7 @@ def load_tables(table_names,api_key,base_id,cache=False):
 
         # convert bool columns to float
         for col in df.columns:
+            print(col)
             if md['Units'].loc[col] == 'bool':
                 print(col)
                 print(type(df[col]))

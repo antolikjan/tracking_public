@@ -158,7 +158,7 @@ class ComparisonPanel(PairedAnalysis):
           # update bar plot data if relevant
           y1,y2 = data_aquisition_overlap_non_nans(self.data_sources['source_corr'].data['x_values'],self.data_sources['source_corr'].data['y_values'])
 
-          if (len(set(y1)) < 11 or len(set(y2)) < 11) and self.ui_elements["show_bars_button"].active:
+          if (len(set(y1)) < 13 or len(set(y2)) < 13) and self.ui_elements["show_bars_button"].active:
              self.bar_plot_flag = True      
              self.bar_plot_x_axis_flag = False
              if len(set(y1)) > len(set(y2)):
