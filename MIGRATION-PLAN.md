@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 2 — Component inventory and baseline construction tests.
+Milestone 3 — Baseline browser smoke test on current Bokeh.
 
 ---
 
@@ -80,7 +80,33 @@ This milestone creates the minimum test foundation. It should not upgrade Bokeh 
 
 # Milestone 2 — Component inventory and baseline construction tests
 
-Status: Not started.
+Status: Done.
+
+## Component inventory
+
+- App shell: `scripts.create_app.create_app(df, metadata, categories, relationships, bldt)` builds a Bokeh `Tabs` container.
+- Active top-level tabs:
+  - Comparison: `scripts.comparison.ComparisonPanel(...).compose_panel()`
+  - Event Based Analysis: `scripts.event_based.EventBasedAnalysisPanel(...).compose_panel()`
+  - Correlations: `scripts.correlations.panel(...)`
+  - Relationships: `scripts.relationships.panel(...)`
+  - BloodTests: `scripts.blood_tests.BloodTests(...).compose_panel()`
+- Shared UI/helper code:
+  - `scripts.ui_framework.analysis_panel.AnalysisPanel` provides shared panel composition, update dispatch, and widget registration.
+  - `scripts.ui_framework.paired_analysis.PairedAnalysis` provides the shared two-variable selector/data-source base used by comparison and event-based views.
+- Inactive/commented app area: `scripts.bloodtests_correlations.BloodTestsCorrelationsPanel` is imported but not currently included in `create_app.py`, so it remains outside active app-shell construction coverage.
+- Correlations construction is isolated at panel-build level only; expensive correlation recalculation is still user-triggered by the Recalculate button and is not exercised by this smoke milestone.
+
+## Review note
+
+Files changed: `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest`.
+Test results: 10 passed, 56 warnings.
+Remaining risks: tests still rely on local cached pickle files for component construction; existing Bokeh, pandas/date parsing, fragmentation, runtime, and attribute-assignment warnings remain; browser-level coverage and Bokeh upgrade compatibility are left for later milestones.
+
+## Accepted note
+
+Accepted after review. Component inventory and cache-backed construction smoke coverage are in place; next work should add the baseline browser smoke test on the current Bokeh stack.
 
 ## Objective
 
