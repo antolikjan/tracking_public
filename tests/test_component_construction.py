@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from bokeh.models import Panel, Select, Tabs
+from bokeh.models import Select, TabPanel, Tabs
 
 import scripts.correlations as correlations
 import scripts.data as data
@@ -77,7 +77,7 @@ def cached_relationships(cached_tracking_data, monkeypatch):
 
 
 def assert_panel(panel, title):
-    assert isinstance(panel, Panel)
+    assert isinstance(panel, TabPanel)
     assert panel.title == title
     assert panel.child is not None
 

@@ -2,8 +2,6 @@ from bokeh.models import Tabs
 import scripts.comparison, scripts.correlations, scripts.relationships, scripts.event_based, scripts.bloodtests_correlations
 import scripts.blood_tests
 
-from bokeh.models import Panel
-
 def create_app(df,metadata,categories,relationships, bldt):
 	global tabs
 

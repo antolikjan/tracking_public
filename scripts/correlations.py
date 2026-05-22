@@ -1,6 +1,6 @@
 from functools import partial
 from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, Panel
+from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, TabPanel
 from scripts.data import both_valid, data_aquisition_overlap_non_nans
 import scipy.stats
 import numpy
@@ -418,6 +418,6 @@ def panel(data,categories,metadata,relationships,comparison_panel):
 
     layout = Row(Column(Row(ui['dt_pckr_start'],ui['dt_pckr_end']),ui['button1'],Div(text="""<hr width=240px>"""),ui['max_p'],ui['show_which_column'],Paragraph(text="View:"),ui['hide_list_choice'],ui['button2'],ui['button3'],ui['button4']),Spacer(width=50),ui['RightColumn'],sizing_mode="stretch_both")
     
-    panel = Panel(child=layout, title="Correlations")
+    panel = TabPanel(child=layout, title="Correlations")
     
     return panel

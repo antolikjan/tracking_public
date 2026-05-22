@@ -52,7 +52,7 @@ class EventBasedAnalysisPanel(PairedAnalysis):
                        fill_color=factor_cmap('windows', palette=['#000000',"#E69F01"], factors=['before','after'], start=1, end=2))
 
           labels = LabelSet(x='x', y=0, text='p-values',text_color='color',
-                           source=self.data_sources['source_event_changed_labels'], render_mode='canvas',text_align='center',text_font_style='bold')
+                           source=self.data_sources['source_event_changed_labels'],text_align='center',text_font_style='bold')
 
           plot.add_layout(labels)
 
@@ -81,7 +81,7 @@ class EventBasedAnalysisPanel(PairedAnalysis):
           # EVENT TRIGGERED AVERAGE
           d = event_weighted_average(a,b)
           half_length =  int(numpy.floor(len(a)/2))
-          self.data_sources['source_event_triggered'].data = {'x_values' : range(2*half_length+1),'event_triggered' : d}
+          self.data_sources['source_event_triggered'].data = {'x_values' : list(range(2*half_length+1)),'event_triggered' : d}
           self.data_sources['source_event_triggered_variables'].data={'half_length' : [half_length],'var2_mean' : [numpy.nanmean(b)]}
 
           # EVENT TRIGGERED CHANGE

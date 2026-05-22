@@ -1,4 +1,4 @@
-from bokeh.models import Row, Div, Spacer, Panel
+from bokeh.models import Row, Div, Spacer, TabPanel
 from scripts.data import categories, filter_data, cross_corr, both_valid, data_aquisition_overlap
 
 
@@ -68,7 +68,7 @@ class AnalysisPanel():
           """
           layout = Row(self.compose_widgets(),Spacer(width=20),self.compose_plots(),sizing_mode="stretch_both")
             
-          panel = Panel(child=layout, title=self.title)
+          panel = TabPanel(child=layout, title=self.title)
 
           self.update_widgets()        
           self.update_data()        
@@ -96,6 +96,4 @@ class AnalysisPanel():
           for action in actions_to_respond_to:
               self.ui_elements[widget_name].on_change(action, self.update)
               
-
-
 

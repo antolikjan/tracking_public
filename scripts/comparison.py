@@ -1,6 +1,7 @@
 from bokeh.models import Column, Row, Range1d, Div, Spacer, Label, Slope, RangeTool, LinearAxis, Toggle, FactorRange, DataRange1d, Whisker, HoverTool
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
+from bokeh.core.properties import value
 from scripts.data import cross_corr, both_valid, data_aquisition_overlap, data_aquisition_overlap_non_nans
 import numpy, scipy
 from scripts.ui_framework.paired_analysis import PairedAnalysis
@@ -35,8 +36,8 @@ class ComparisonPanel(PairedAnalysis):
             p1 = figure(width=300,height=320,sizing_mode="stretch_both",x_axis_type='datetime',y_range=(range1_start,range1_end),x_axis_location="above",tools="xpan",x_range=(data.index[1].timestamp()*1000,data.index[-1].timestamp()*1000))
             p1.extra_y_ranges = {"right" : Range1d(start=range2_start,end=range2_end)}
             p1.add_layout(LinearAxis(y_range_name="right"), 'right')
-            self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
-            self.plots['circles2'] = p1.circle(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
+            self.plots['circles1'] = p1.scatter(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
+            self.plots['circles2'] = p1.scatter(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
             self.plots['filtered_line1'] = p1.line(x='x_values',y='y_values_post_processed1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False, width = 2)
             self.plots['filtered_line2'] = p1.line(x='x_values',y='y_values_post_processed2',source=self.data_sources['raw_data'],color="green",alpha=1.0,y_range_name='right',visible=False, width = 2)   
             p1.yaxis[0].major_label_text_color = "navy"
@@ -60,12 +61,11 @@ class ComparisonPanel(PairedAnalysis):
             select.line(x='x_values', y='y_values1', source=self.data_sources['raw_data'],color="black",line_width=2)
             select.ygrid.grid_line_color = None
             select.add_tools(rt)
-            select.toolbar.active_multi = rt
             self.plots['select'] = select
 
             # FIGURE 3
             pf1 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
-            self.plots['filter_line1'] = pf1.circle(x='x_values',y='filter1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False)
+            self.plots['filter_line1'] = pf1.scatter(x='x_values',y='filter1',source=self.data_sources['raw_data'],color="navy",alpha=1.0,visible=False)
 
             pf1.yaxis.ticker=[]
             pf1.toolbar.logo = None
@@ -77,7 +77,7 @@ class ComparisonPanel(PairedAnalysis):
 
             # FIGURE 4
             pf2 = figure(width=300,height=60,sizing_mode="stretch_width",x_axis_type='datetime')
-            self.plots['filter_line2'] = pf2.circle(x='x_values',y='filter2',source=self.data_sources['raw_data'],color="green",alpha=1.0,visible=False)
+            self.plots['filter_line2'] = pf2.scatter(x='x_values',y='filter2',source=self.data_sources['raw_data'],color="green",alpha=1.0,visible=False)
             pf2.yaxis.ticker=[]
             pf2.toolbar.logo = None
             pf2.toolbar_location = None
@@ -88,7 +88,7 @@ class ComparisonPanel(PairedAnalysis):
 
             # FIGURE 5
             p3 = figure(width=300,height=300,sizing_mode="stretch_both",title='')
-            p3.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
+            p3.scatter(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
             p3.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
             p3.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
             p3.xaxis.axis_label = "DistanceFitbit"
@@ -234,8 +234,8 @@ class ComparisonPanel(PairedAnalysis):
           mean2 = numpy.nanmean(a)
           sem2 = numpy.nanstd(a, ddof=1) / numpy.sqrt(numpy.size(a[~numpy.isnan(a)]))
 
-          self.plots['time_series'].legend.items[0].label['value']='Mean: ' + "{0:.6g}".format(mean1) + '±' + "{0:.6g}".format(sem1)
-          self.plots['time_series'].legend.items[1].label['value']='Mean: ' + "{0:.6g}".format(mean2) + '±' + "{0:.6g}".format(sem2)
+          self.plots['time_series'].legend.items[0].label=value('Mean: ' + "{0:.6g}".format(mean1) + '±' + "{0:.6g}".format(sem1))
+          self.plots['time_series'].legend.items[1].label=value('Mean: ' + "{0:.6g}".format(mean2) + '±' + "{0:.6g}".format(sem2))
 
           # Forcing legend re-render :-(
           a=self.plots['time_series'].legend.items

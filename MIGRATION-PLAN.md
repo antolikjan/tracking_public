@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 4 — Bokeh compatibility preparation without upgrading.
+Milestone 6 — Migrate relationships and core tracking views.
 
 ---
 
@@ -207,7 +207,18 @@ Possible one-time setup:
 
 # Milestone 4 — Bokeh compatibility preparation without upgrading
 
-Status: Current / Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `scripts/ui_framework/bokeh_compat.py`, `scripts/ui_framework/analysis_panel.py`, `scripts/correlations.py`, `scripts/relationships.py`, `scripts/create_app.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest`.
+Test results: 11 passed, 67 warnings.
+Remaining risks: Bokeh has not been upgraded yet; compatibility has only been validated under the current Bokeh 2.4.x stack. The main confirmed Bokeh 3 hotspot addressed here is `Panel` renamed to `TabPanel`; active `width`/`height` and `legend_label` usage already appears compatible. Existing Bokeh, Tornado, pandas/date parsing, fragmentation, runtime, and attribute-assignment warnings remain for later milestones.
+
+## Accepted note
+
+Accepted after review. Bokeh tab-panel compatibility preparation is in place; next work should perform the Bokeh 3.x dependency upgrade and fix app-shell/shared-UI breakages.
 
 ## Objective
 
@@ -251,7 +262,18 @@ Make safe compatibility-oriented changes that can be tested under the current Bo
 
 # Milestone 5 — Upgrade Bokeh and fix app shell/shared UI
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `README.md`, `scripts/ui_framework/bokeh_compat.py`, `scripts/ui_framework/analysis_panel.py`, `scripts/create_app.py`, `scripts/correlations.py`, `scripts/relationships.py`, `scripts/comparison.py`, `scripts/event_based.py`, `scripts/bloodtests_correlations.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pip install 'bokeh>=3,<4'`; `~/venvs/tracking/bin/python -m pytest tests/test_cached_data.py::test_app_constructs_from_cached_data tests/test_component_construction.py::test_app_shell_constructs_expected_tabs tests/test_component_construction.py::test_comparison_panel_constructs -q`; `~/venvs/tracking/bin/python -m pytest tests/test_browser_smoke.py::test_bokeh_app_loads_in_browser -q`; `~/venvs/tracking/bin/python -m pytest`; `~/venvs/tracking/bin/python -m bokeh serve main.py`.
+Test results: Bokeh upgraded to 3.9.0; full pytest suite passes with 11 passed and 63 warnings; `bokeh serve main.py` starts successfully when local port binding is allowed.
+Remaining risks: `bokeh serve main.py` startup was validated without opening the Airtable-backed app session; browser smoke coverage uses cached data. Existing pandas/date parsing, fragmentation, runtime, Tornado event-loop, and pandas attribute-assignment warnings remain. Page-specific visual behavior still needs review in later migration milestones.
+
+## Accepted note
+
+Accepted after review. Bokeh 3.9.0 app-shell startup, cached-data construction tests, and browser smoke coverage are in place; next work should migrate relationships and core tracking views.
 
 ## Objective
 
@@ -265,6 +287,7 @@ This is the dependency bump milestone, but it should not try to fix every page-s
 
 - Upgrade Bokeh to a current 3.x version.
 - Update only closely related dependencies if required.
+- Remove the temporary Bokeh 2/3 tab-panel compatibility helper once Bokeh 3.x is the supported runtime.
 - Fix import errors and app startup errors.
 - Fix create_app.py / tab construction.
 - Fix shared UI helpers.

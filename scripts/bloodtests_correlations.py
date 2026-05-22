@@ -68,8 +68,8 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
         p1.extra_y_ranges = {"right" : Range1d(start=range2_start,end=range2_end)}
         p1.add_layout(LinearAxis(y_range_name="right"), 'right')
             #  circle plots on the plot
-        self.plots['circles1'] = p1.circle(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
-        self.plots['circles2'] = p1.circle(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
+        self.plots['circles1'] = p1.scatter(x='x_values',y='y_values1',source=self.data_sources['raw_data'],size=10,color="navy",alpha=0.5,legend_label='A')
+        self.plots['circles2'] = p1.scatter(x='x_values',y='y_values2',source=self.data_sources['raw_data'],size=10,color="green",alpha=0.5,y_range_name='right',legend_label='B')
         
             # additional features
         p1.yaxis[0].major_label_text_color = "navy"
@@ -93,7 +93,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
         # PLOT 2 - the second Bokeh plot for correlations between the chosen variables
         p2 = figure(width=300,height=300,sizing_mode="stretch_both",title='')
-        p2.circle(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
+        p2.scatter(x='x_values',y='y_values',source=self.data_sources['source_corr'],size=5,color="black",alpha=1.0)
 
             # a line connecting data points for a clearer trend
         p2.line(x='x_values',y='y_values',source=self.data_sources['source_corr_mean'],line_width=4,color="black",alpha=0.5)
