@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 3 — Baseline browser smoke test on current Bokeh.
+Milestone 4 — Bokeh compatibility preparation without upgrading.
 
 ---
 
@@ -155,7 +155,14 @@ Inventory and test the current app structure. Do not upgrade Bokeh.
 
 # Milestone 3 — Baseline browser smoke test on current Bokeh
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `tests/test_browser_smoke.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pip install pytest-playwright`; `~/venvs/tracking/bin/python -m playwright install chromium`; `~/venvs/tracking/bin/python -m pytest tests/test_browser_smoke.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: 11 passed, 67 warnings.
+Remaining risks: browser smoke coverage depends on local cached pickle files and a Playwright Chromium install; missing cache files or browser binaries now fail the browser smoke test and are documented in README setup instructions. Existing Bokeh, Tornado, pandas/date parsing, fragmentation, runtime, and attribute-assignment warnings remain for later milestones.
 
 ## Objective
 
@@ -200,7 +207,7 @@ Possible one-time setup:
 
 # Milestone 4 — Bokeh compatibility preparation without upgrading
 
-Status: Not started.
+Status: Current / Not started.
 
 ## Objective
 
