@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 6 — Migrate relationships and core tracking views.
+Milestone 7 — Migrate event-based and comparison views.
 
 ---
 
@@ -317,7 +317,18 @@ Also attempt:
 
 # Milestone 6 — Migrate relationships and core tracking views
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `scripts/relationships.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_relationships_panel_constructs -q`; `~/venvs/tracking/bin/python -m pytest tests/test_browser_smoke.py::test_bokeh_app_loads_in_browser -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_relationships_panel_constructs tests/test_component_construction.py::test_relationship_filters_update_table_source tests/test_component_construction.py::test_relationship_remove_actions_use_selected_rows -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: relationship construction baseline passed; browser smoke passed; focused relationship tests passed with 3 passed and 6 warnings; full suite passed with 13 passed and 63 warnings.
+Remaining risks: relationship coverage is still smoke-level and does not verify manual visual layout; existing Tornado event-loop, pandas/date parsing, fragmentation, runtime, and pandas attribute-assignment warnings remain for later milestones.
+
+## Accepted note
+
+Accepted after review. Relationship/core tracking view migration and focused callback coverage are in place; next work should migrate the event-based and comparison views.
 
 ## Objective
 

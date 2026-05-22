@@ -1,7 +1,8 @@
 from pathlib import Path
 
+import pandas as pd
 import pytest
-from bokeh.models import Select, TabPanel, Tabs
+from bokeh.models import Button, ColumnDataSource, DataTable, Select, TabPanel, Tabs
 
 import scripts.correlations as correlations
 import scripts.data as data
@@ -18,6 +19,26 @@ ROOT = Path(__file__).resolve().parents[1]
 CACHE_FILE = ROOT / "locals" / "cache.pickle"
 BLOOD_TEST_CACHE_FILE = ROOT / "locals" / "cache_bt.pickle"
 RELATIONSHIP_METADATA_FILE = ROOT / "relationship_metadata"
+
+
+class RelationshipRecorder:
+    def __init__(self):
+        self.rm = pd.DataFrame(
+            {
+                "Var1": ["A", "B", "C"],
+                "Var2": ["B", "C", "D"],
+                "IgnoreList": [True, False, True],
+                "BlackList": [False, True, True],
+            }
+        )
+        self.ignorelist_removed = []
+        self.blacklist_removed = []
+
+    def remove_from_ignorelist(self, name1, name2):
+        self.ignorelist_removed.append((name1, name2))
+
+    def remove_from_blacklist(self, name1, name2):
+        self.blacklist_removed.append((name1, name2))
 
 
 def require_cache_files(*paths):
@@ -112,6 +133,49 @@ def test_relationships_panel_constructs(cached_relationships):
     panel = relationships_view.panel(cached_relationships)
 
     assert_panel(panel, "Relationships")
+    controls, data_table = panel.child.children
+
+    assert isinstance(data_table, DataTable)
+    assert [column.field for column in data_table.columns] == [
+        "Var1",
+        "Var2",
+        "IgnoreList",
+        "BlackList",
+    ]
+    assert [button.label for button in controls.children] == [
+        "Show Ignored",
+        "Show Blacklisted",
+        "Remove from Ignored",
+        "Remove from Blacklist",
+    ]
+    assert all(isinstance(button, Button) for button in controls.children)
+
+
+def test_relationship_filters_update_table_source():
+    relationships = RelationshipRecorder()
+    source = ColumnDataSource(relationships.rm)
+
+    relationships_view.filter_ignored(source, relationships)
+
+    assert list(source.data["Var1"]) == ["A", "C"]
+    assert list(source.data["Var2"]) == ["B", "D"]
+
+    relationships_view.filter_blacklisted(source, relationships)
+
+    assert list(source.data["Var1"]) == ["B", "C"]
+    assert list(source.data["Var2"]) == ["C", "D"]
+
+
+def test_relationship_remove_actions_use_selected_rows():
+    relationships = RelationshipRecorder()
+    source = ColumnDataSource(relationships.rm)
+    source.selected.indices = [0, 2]
+
+    relationships_view.remove_from_ignorelist(source, relationships)
+    relationships_view.remove_from_blacklist(source, relationships)
+
+    assert relationships.ignorelist_removed == [("A", "B"), ("C", "D")]
+    assert relationships.blacklist_removed == [("A", "B"), ("C", "D")]
 
 
 def test_comparison_panel_constructs(cached_tracking_data):

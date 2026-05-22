@@ -1,9 +1,7 @@
 from functools import partial
-from bokeh.plotting import figure
-from bokeh.models import ColumnDataSource, Row, Column, TableColumn, DataTable, Button, TabPanel
-from scripts.data import both_valid
-from datetime import datetime
-from datetime import date
+
+from bokeh.layouts import column, row
+from bokeh.models import Button, ColumnDataSource, DataTable, TableColumn, TabPanel
 
 ui = {}
 
@@ -53,6 +51,13 @@ def panel(relationships):
     ui['button4'].on_click(partial(remove_from_blacklist,source=source,relationships=relationships))
 
  
-    panel = TabPanel(child=Row(Column(ui['button1'],ui['button2'],ui['button3'],ui['button4']),data_table,sizing_mode="stretch_both"), title="Relationships")
+    panel = TabPanel(
+        child=row(
+            column(ui['button1'], ui['button2'], ui['button3'], ui['button4']),
+            data_table,
+            sizing_mode="stretch_both",
+        ),
+        title="Relationships",
+    )
 
     return panel
