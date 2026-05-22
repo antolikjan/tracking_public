@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 7 — Migrate event-based and comparison views.
+Milestone 8 — Migrate correlation views.
 
 ---
 
@@ -362,7 +362,18 @@ Focus on relationship-related dashboard components before moving to more special
 
 # Milestone 7 — Migrate event-based and comparison views
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `scripts/event_based.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_comparison_panel_constructs tests/test_component_construction.py::test_event_based_panel_constructs -q`; `~/venvs/tracking/bin/python -m pytest tests/test_browser_smoke.py::test_bokeh_app_loads_in_browser -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_comparison_panel_constructs tests/test_component_construction.py::test_comparison_panel_updates_filtered_and_bar_views tests/test_component_construction.py::test_event_based_panel_constructs tests/test_component_construction.py::test_event_based_panel_updates_reference_lines -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: focused comparison/event-based tests passed with 4 passed and 27 warnings; component construction tests passed with 11 passed and 54 warnings; browser smoke passed with 1 passed and 9 warnings; full suite passed with 15 passed and 77 warnings.
+Remaining risks: coverage is still smoke-level and does not verify manual visual layout; comparison bar-mode behavior depends on selected low-cardinality variables and is not deeply asserted; existing Tornado event-loop, pandas/date parsing, fragmentation, runtime, numpy, and pandas attribute-assignment warnings remain for later milestones.
+
+## Accepted note
+
+Accepted after review. Event-based and comparison view migration coverage is in place; next work should migrate the correlation views.
 
 ## Objective
 

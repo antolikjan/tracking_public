@@ -44,7 +44,7 @@ class EventBasedAnalysisPanel(PairedAnalysis):
           plot.add_layout(hline)
           self.plots['eta'] = plot
           self.plots['vline'] = vline
-          self.plots['hline'] = vline
+          self.plots['hline'] = hline
 
           plot = figure(x_range=FactorRange(*self.factors), height=350, width=900,sizing_mode="stretch_both",toolbar_location=None, tools="")
 

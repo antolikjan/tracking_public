@@ -186,6 +186,24 @@ def test_comparison_panel_constructs(cached_tracking_data):
     assert_panel(panel, "Comparison")
 
 
+def test_comparison_panel_updates_filtered_and_bar_views(cached_tracking_data):
+    df, metadata, categories = cached_tracking_data
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    comparison_panel.compose_panel()
+
+    comparison_panel.ui_elements["select_filter1"].value = "Gauss"
+    comparison_panel.ui_elements["select_filter2"].value = "Gauss"
+    comparison_panel.ui_elements["show_stats_button"].active = True
+    comparison_panel.ui_elements["show_bars_button"].active = True
+
+    comparison_panel.update("value", None, None)
+
+    assert comparison_panel.plots["time_series"].legend.visible
+    assert comparison_panel.plots["filtered_line1"].visible
+    assert comparison_panel.plots["filtered_line2"].visible
+    assert len(comparison_panel.data_sources["source_corr"].data["x_values"]) > 0
+
+
 def test_event_based_panel_constructs(cached_tracking_data):
     df, metadata, categories = cached_tracking_data
 
@@ -194,6 +212,24 @@ def test_event_based_panel_constructs(cached_tracking_data):
     ).compose_panel()
 
     assert_panel(panel, "Event Based Analysis")
+
+
+def test_event_based_panel_updates_reference_lines(cached_tracking_data):
+    df, metadata, categories = cached_tracking_data
+    event_panel = EventBasedAnalysisPanel(
+        df, categories, metadata, "Event Based Analysis"
+    )
+    event_panel.compose_panel()
+
+    half_length = event_panel.data_sources["source_event_triggered_variables"].data[
+        "half_length"
+    ][0]
+    var2_mean = event_panel.data_sources["source_event_triggered_variables"].data[
+        "var2_mean"
+    ][0]
+
+    assert event_panel.plots["vline"].location == half_length
+    assert event_panel.plots["hline"].location == var2_mean
 
 
 def test_correlations_panel_constructs(cached_tracking_data, cached_relationships):
