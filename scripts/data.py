@@ -171,8 +171,6 @@ def special_preprocessing_rules(df,md):
 #    ne = sum([df['Negative Effects'] for df in tables])/4
 
 def load_blood_tests(api_key,base_id,cache=False):
-    table = Table(api_key, base_id, 'BloodTest')
-
     views = {
         "WBC Rest" : ["Leukocites (G/L)", "RBC (T/L)", "Hemoglobin (g/L)", "Hematocrite ()", "MCV (fl)", "MCH  (pg)", "MCHC (g/dl)","Palettel (G/L)", "Palettel Distribution Width (%)", "RBC Distribution Width CV (%)", "MPV (fl)", "ESR (mm/h)", "Protrombin_time (s)", "Protrombin_time_R", "Protrombin_time_INR", "APTT-P (s)", "APTT_R", "Fibrinogen (g/l)", "Thrombin time (s)", "Antitrombin (%)", "D-dimer (mg/l)"],
         "WBC Differential" : ["Neutrophiles (%)", "Lymfocytes (%)", "Monocytes  (%)", "Esophiles  (%)", "Basophiles (%)", "Lymphocyte count (G/l)", "Monocytes count (G/l)", "Neutrophils count (G/l)", "Esophiles clount (G/l)", "Basophiles count (G/l)", "Neutrophils/Lymphocytes ()", "Retikulocity (%)", "Retikulocytes count (10^9/l)", "NRBC count"],
@@ -197,14 +195,16 @@ def load_blood_tests(api_key,base_id,cache=False):
     }
 
     if not cache:
+        table = Table(api_key, base_id, 'BloodTest')
         blood_tests = {}
-        print(next(table.iterate())[0])
+
         fields = next(table.iterate())[0]["fields"].keys()
+
         for view in views:
             v = list(set(fields).intersection(views[view]))
             blood_tests[view] = convert_to_dataframe(table.all(fields = v+["Date"]),index_column="Date", datatime_index=True)
             blood_tests[view].sort_index(inplace=True)
-        
+
         # cache the data
         pickle.dump(blood_tests,open('./locals/cache_bt.pickle','bw'))
     else:

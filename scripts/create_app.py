@@ -22,5 +22,4 @@ def create_app(df,metadata,categories,relationships, bldt):
 		blt.compose_panel(),
 #		crl_bt.compose_panel()
 		])
-	print("FINAL")
 	return tabs
