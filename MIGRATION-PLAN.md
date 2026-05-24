@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 9 — Migrate blood-test views.
+Milestone 10 — Full app browser smoke test under Bokeh 3.x.
 
 ---
 
@@ -449,7 +449,18 @@ Focus on correlations.py and bloodtests_correlations.py.
 
 # Milestone 9 — Migrate blood-test views
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `scripts/blood_tests.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_blood_tests_panel_constructs tests/test_component_construction.py::test_blood_tests_panel_updates_selected_view -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: focused blood-test tests passed with 2 passed and 12 warnings; component construction tests passed with 16 passed and 82 warnings; full suite passed with 20 passed and 103 warnings.
+Remaining risks: coverage is still construction and callback smoke-level rather than manual visual review; existing Tornado event-loop, pandas/date parsing, fragmentation, runtime, and numpy warnings remain for later milestones.
+
+## Accepted note
+
+Accepted after review. Blood-test view source handling and focused selector-update coverage are in place; next work should run the full app browser smoke test under Bokeh 3.x.
 
 ## Objective
 

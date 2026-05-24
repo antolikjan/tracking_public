@@ -26,12 +26,12 @@ class BloodTests(AnalysisPanel):
         
         self.table = 'Minerals'   # Initial (default) view
         # Create a data source for the initial view
-        self.data_sources[self.table] = self.raw_data[self.table]
+        self.data_sources[self.table] = ColumnDataSource(data=self.raw_data[self.table])
         # Create columns for the DataTable widget based on the selected view
         self.columns = self.create_columns(self.raw_data[self.table])
         
         # Create a DataTable widget with the selected data source and columns
-        self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), columns=self.columns, width=1400, height=1000)
+        self.plots[self.table] = DataTable(source=self.data_sources[self.table], columns=self.columns, width=1400, height=1000)
 
         # Create a layout for the DataTable
         self.plot_layout = Column(self.plots[self.table])
@@ -135,10 +135,10 @@ class BloodTests(AnalysisPanel):
 
         # Check if the selected view is already in data_sources. If not, add it.
         if self.table not in self.data_sources:
-            self.data_sources[self.table] = new_data
+            self.data_sources[self.table] = ColumnDataSource(data=new_data)
 
         # Update the data of the DataTable widget with the new data
-        self.data_sources[self.table].data = new_data
+        self.data_sources[self.table].data = ColumnDataSource.from_df(new_data)
 
     def update_plots(self):
         """
@@ -153,7 +153,7 @@ class BloodTests(AnalysisPanel):
         self.columns = self.create_columns(self.raw_data[self.table])
 
         # Create a new DataTable widget with the updated data and columns
-        self.plots[self.table] = DataTable(source=ColumnDataSource(data=self.data_sources[self.table]), 
+        self.plots[self.table] = DataTable(source=self.data_sources[self.table], 
                                             columns=self.columns, 
                                             width=1400, 
                                             height=1000)

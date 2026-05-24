@@ -334,6 +334,27 @@ def test_blood_tests_panel_constructs(cached_blood_tests, cached_tracking_data):
     assert_panel(panel, "BloodTests")
 
 
+def test_blood_tests_panel_updates_selected_view(cached_blood_tests, cached_tracking_data):
+    _, metadata, categories = cached_tracking_data
+    blood_tests_panel = BloodTests(
+        cached_blood_tests, categories, metadata, "BloodTests"
+    )
+    blood_tests_panel.compose_panel()
+
+    selected_view = next(
+        view for view in cached_blood_tests.keys() if view != blood_tests_panel.table
+    )
+    blood_tests_panel.ui_elements["views"].value = selected_view
+
+    blood_tests_panel.update("value", None, selected_view)
+
+    data_table = blood_tests_panel.plot_layout.children[0]
+    assert isinstance(data_table, DataTable)
+    assert blood_tests_panel.table == selected_view
+    assert data_table.source is blood_tests_panel.data_sources[selected_view]
+    assert set(cached_blood_tests[selected_view].columns).issubset(data_table.source.data)
+
+
 def test_blood_tests_correlations_panel_constructs(
     cached_blood_tests, cached_tracking_data
 ):
