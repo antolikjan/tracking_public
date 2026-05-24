@@ -10,7 +10,7 @@ From the repository root:
 Codex should use:
 
 - `AGENTS.md` for project rules
-- `MIGRATION-PLAN.md` for milestones and progress
+- `ADVANCED-TESTING.md` for milestones and progress
 
 ---
 
@@ -20,11 +20,11 @@ Codex should use:
 
 Prompt:
 
-    Read AGENTS.md and MIGRATION-PLAN.md. Inspect git status.
+    Read AGENTS.md and ADVANCED-TESTING.md. Inspect git status.
 
     Do not edit code yet.
 
-    Identify the Current next milestone in MIGRATION-PLAN.md.
+    Identify the Current next milestone in ADVANCED-TESTING.md.
 
     Propose a concrete implementation plan for that milestone only.
 
@@ -42,7 +42,7 @@ After reviewing the plan, prompt:
 
     Run the relevant validation commands.
 
-    Update MIGRATION-PLAN.md:
+    Update ADVANCED-TESTING.md:
     - set this milestone's Status to Ready for review
     - add a short Review note with files changed, commands run, test results, and remaining risks
     - do not mark the milestone Done
@@ -85,7 +85,7 @@ Prompt:
 
     Make no code changes.
 
-    Update MIGRATION-PLAN.md only:
+    Update ADVANCED-TESTING.md only:
     - change this milestone's Status to Done
     - add a short Accepted note if useful
     - advance Current next milestone to the next incomplete milestone

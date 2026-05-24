@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Optional Milestone 12 — Panel evaluation.
+No remaining incomplete milestones.
 
 ---
 
@@ -585,7 +585,7 @@ Clean up only what is useful after the migration.
 
 # Optional Milestone 12 — Panel evaluation
 
-Status: Ready for review.
+Status: Done.
 
 ## Review note
 
@@ -597,6 +597,10 @@ Test results: full pytest suite passed with 20 passed and 103 warnings.
 Remaining risks: this was an evaluation-only milestone; no Panel proof of concept was created because the existing Bokeh Server shell was sufficient and the researched benefits did not justify extra dependency/runtime churn. Existing warning noise remains unchanged.
 
 Research references: Panel Bokeh pane documentation (`https://panel.holoviz.org/reference/panes/Bokeh.html`), Panel server documentation (`https://panel.holoviz.org/how_to/server/index.html`, `https://panel.holoviz.org/how_to/server/commandline.html`), Panel Tabs documentation (`https://panel.holoviz.org/reference/layouts/Tabs.html`), Panel Param documentation (`https://panel.holoviz.org/explanation/api/param.html`), and Bokeh Server documentation (`https://docs.bokeh.org/en/latest/docs/user_guide/server.html`).
+
+## Accepted note
+
+Accepted after review. Panel migration is not recommended for the current project needs; the migration plan has no remaining incomplete milestones.
 
 ## Objective
 
