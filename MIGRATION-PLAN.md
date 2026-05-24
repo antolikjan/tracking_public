@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 10 — Full app browser smoke test under Bokeh 3.x.
+Milestone 11 — Final cleanup and run documentation.
 
 ---
 
@@ -491,7 +491,18 @@ Focus on blood_tests.py and any related blood-test UI code.
 
 # Milestone 10 — Full app browser smoke test under Bokeh 3.x
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `tests/test_browser_smoke.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_browser_smoke.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: focused browser smoke passed with 1 passed and 8 warnings; full suite passed with 20 passed and 103 warnings.
+Remaining risks: browser coverage remains smoke-level and does not verify detailed visual layout or pixel output; test still depends on local cached pickle files, relationship metadata, and installed Playwright Chromium. Existing Tornado event-loop, pandas/date parsing, fragmentation, runtime, and numpy warnings remain.
+
+## Accepted note
+
+Accepted after review. Full app browser smoke coverage now visits each active top-level dashboard tab under Bokeh 3.x; next work should do final cleanup and run documentation.
 
 ## Objective
 

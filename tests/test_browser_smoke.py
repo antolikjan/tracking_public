@@ -17,6 +17,13 @@ CACHE_FILE = ROOT / "locals" / "cache.pickle"
 BLOOD_TEST_CACHE_FILE = ROOT / "locals" / "cache_bt.pickle"
 RELATIONSHIP_METADATA_FILE = ROOT / "relationship_metadata"
 BROWSER_TIMEOUT_MS = 90_000
+EXPECTED_TOP_LEVEL_TABS = [
+    "Comparison",
+    "Event Based Analysis",
+    "Correlations",
+    "Relationships",
+    "BloodTests",
+]
 
 
 def require_cache_files(*paths):
@@ -86,6 +93,12 @@ def stop_bokeh_server(server, io_loop, thread):
     thread.join(timeout=5)
 
 
+def wait_for_bokeh_document(page):
+    page.wait_for_function(
+        "() => window.Bokeh && Object.keys(window.Bokeh.index).length > 0"
+    )
+
+
 def test_bokeh_app_loads_in_browser(table_names, monkeypatch):
     require_cache_files(CACHE_FILE, BLOOD_TEST_CACHE_FILE, RELATIONSHIP_METADATA_FILE)
     monkeypatch.setattr(RelationshipMetadata, "save", lambda self: None)
@@ -100,36 +113,32 @@ def test_bokeh_app_loads_in_browser(table_names, monkeypatch):
                 page = browser.new_page()
                 page.set_default_timeout(BROWSER_TIMEOUT_MS)
                 console_errors = []
+                page_errors = []
                 page.on(
                     "console",
                     lambda msg: console_errors.append(msg.text)
                     if msg.type == "error"
                     else None,
                 )
+                page.on("pageerror", lambda exc: page_errors.append(str(exc)))
 
                 page.goto(
                     f"http://localhost:{server.port}/",
                     wait_until="domcontentloaded",
                     timeout=BROWSER_TIMEOUT_MS,
                 )
-                page.wait_for_function(
-                    "() => window.Bokeh && Object.keys(window.Bokeh.index).length > 0"
-                )
+                wait_for_bokeh_document(page)
 
-                expected_tabs = [
-                    "Comparison",
-                    "Event Based Analysis",
-                    "Correlations",
-                    "Relationships",
-                    "BloodTests",
-                ]
-                for tab_title in expected_tabs:
+                for tab_title in EXPECTED_TOP_LEVEL_TABS:
                     page.get_by_text(tab_title, exact=True).first.wait_for()
 
-                for tab_title in expected_tabs:
+                for tab_title in EXPECTED_TOP_LEVEL_TABS:
                     page.get_by_text(tab_title, exact=True).first.click()
+                    wait_for_bokeh_document(page)
+                    page.get_by_text(tab_title, exact=True).first.wait_for()
 
                 assert not console_errors
+                assert not page_errors
             finally:
                 browser.close()
     finally:
