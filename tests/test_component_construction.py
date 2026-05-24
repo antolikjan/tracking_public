@@ -8,6 +8,7 @@ import scripts.correlations as correlations
 import scripts.data as data
 import scripts.relationships as relationships_view
 from scripts.blood_tests import BloodTests
+from scripts.bloodtests_correlations import BloodTestsCorrelationsPanel
 from scripts.comparison import ComparisonPanel
 from scripts.create_app import create_app
 from scripts.event_based import EventBasedAnalysisPanel
@@ -39,6 +40,12 @@ class RelationshipRecorder:
 
     def remove_from_blacklist(self, name1, name2):
         self.blacklist_removed.append((name1, name2))
+
+    def is_on_ignore_list(self, pairs):
+        return [tuple(pair) in {("A", "B"), ("C", "D")} for pair in pairs]
+
+    def is_on_black_list(self, pairs):
+        return [tuple(pair) in {("B", "C"), ("C", "D")} for pair in pairs]
 
 
 def require_cache_files(*paths):
@@ -243,6 +250,80 @@ def test_correlations_panel_constructs(cached_tracking_data, cached_relationship
     assert_panel(panel, "Correlations")
 
 
+def test_correlations_panel_exposes_table_and_controls(
+    cached_tracking_data, cached_relationships
+):
+    df, metadata, categories = cached_tracking_data
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+
+    panel = correlations.panel(
+        df, categories, metadata, cached_relationships, comparison_panel
+    )
+
+    controls = panel.child.children[0]
+    data_table = correlations.ui["dt"]
+
+    assert isinstance(data_table, DataTable)
+    assert [column.field for column in data_table.columns] == [
+        "Variable 1",
+        "Variable 2",
+        "R",
+        "p-value",
+        "shift",
+        "r_no_shift",
+        "p_no_shift",
+        "r_no_v1_to_v2",
+        "p_no_v1_to_v2",
+        "r_no_v2_to_v1",
+        "p_no_v2_to_v1",
+        "Accumulation analysis P",
+        "Accumulation analysis R",
+        "Accumulation analysis Sigma",
+        "Accumulation analysis Dir",
+    ]
+    assert [button.label for button in controls.children if isinstance(button, Button)] == [
+        "Recalculate",
+        "Switch to inspection",
+        "Add to ignore list",
+        "Add to black list",
+    ]
+
+
+def test_correlations_table_filter_updates_source(cached_tracking_data):
+    df, metadata, categories = cached_tracking_data
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    relationships = RelationshipRecorder()
+    panel = correlations.panel(df, categories, metadata, relationships, comparison_panel)
+    source = correlations.ui["dt"].source
+
+    correlations.val1[:] = ["A", "B", "C"]
+    correlations.val2[:] = ["B", "C", "D"]
+    correlations.rs[:] = [0.5, 0.7, 0.9]
+    correlations.pvals[:] = [0.001, 0.2, 0.01]
+    correlations.shift[:] = ["==", "Var1 -> Var2", "Var2 -> Var1"]
+    correlations.rs_v1_pr_v2[:] = [0.4, 0.6, 0.8]
+    correlations.rs_v2_pr_v1[:] = [0.3, 0.5, 0.7]
+    correlations.rs_nosh[:] = [0.2, 0.4, 0.6]
+    correlations.pvals_v1_pr_v2[:] = [0.002, 0.3, 0.02]
+    correlations.pvals_v2_pr_v1[:] = [0.003, 0.4, 0.03]
+    correlations.pvals_nosh[:] = [0.004, 0.5, 0.04]
+    correlations.acc_p[:] = [0.005, 0.6, 0.05]
+    correlations.acc_r[:] = [0.1, 0.2, 0.3]
+    correlations.acc_sigma[:] = [2, 4, 8]
+    correlations.acc_dir[:] = ["Var1 -> Var2", "Var2 -> Var1", "Var1 -> Var2"]
+
+    correlations.ui["hide_list_choice"].active = 0
+    correlations.ui["show_which"].active = 0
+    correlations.ui["max_p"].value = 0.05
+
+    correlations.set_table(None, None, None, source, relationships)
+
+    assert_panel(panel, "Correlations")
+    assert list(source.data["Variable 1"]) == ["A", "C"]
+    assert list(source.data["Variable 2"]) == ["B", "D"]
+    assert list(source.data["p-value"]) == [0.001, 0.01]
+
+
 def test_blood_tests_panel_constructs(cached_blood_tests, cached_tracking_data):
     _, metadata, categories = cached_tracking_data
 
@@ -251,3 +332,31 @@ def test_blood_tests_panel_constructs(cached_blood_tests, cached_tracking_data):
     ).compose_panel()
 
     assert_panel(panel, "BloodTests")
+
+
+def test_blood_tests_correlations_panel_constructs(
+    cached_blood_tests, cached_tracking_data
+):
+    df, metadata, categories = cached_tracking_data
+
+    panel = BloodTestsCorrelationsPanel(
+        df, cached_blood_tests, categories, metadata, "BloodTests Correlations"
+    ).compose_panel()
+
+    assert_panel(panel, "BloodTests Correlations")
+
+
+def test_blood_tests_correlations_panel_updates_sources(
+    cached_blood_tests, cached_tracking_data
+):
+    df, metadata, categories = cached_tracking_data
+    panel = BloodTestsCorrelationsPanel(
+        df, cached_blood_tests, categories, metadata, "BloodTests Correlations"
+    )
+    panel.compose_panel()
+
+    assert len(panel.data_sources["raw_data"].data["x_values"]) > 0
+    assert len(panel.data_sources["source_corr"].data["x_values"]) > 0
+    assert panel.ui_elements["select_variable2"].value in cached_blood_tests[
+        panel.ui_elements["select_view"].value
+    ].columns

@@ -23,47 +23,52 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
 
         self.views = views
-        self.bloodtest_dates = views['Minerals'].index     # dates of blood tests
+        initial_category = 'Fitbit' if 'Fitbit' in categories else list(categories.keys())[0]
+        initial_variable1 = 'DistanceFitbit' if 'DistanceFitbit' in categories[initial_category] else categories[initial_category][0]
+        initial_view = self._first_view_with_columns('Minerals')
+        initial_variable2 = self.views[initial_view].columns[0]
+
+        self.bloodtest_dates = views[initial_view].index     # dates of blood tests
 
         ### WIDGETS
         ## Initialize and register various widgets for user interaction.
           
           # widgets for variable 1
-        self.register_widget(Select(title="Category",  options=list(categories.keys()), value = 'Fitbit'),'select_category',['value'])
-        self.register_widget(Select(title = 'Name', value = 'DistanceFitbit', options = list(categories['Fitbit'])),'select_variable1',['value'])
+        self.register_widget(Select(title="Category",  options=list(categories.keys()), value=initial_category),'select_category',['value'])
+        self.register_widget(Select(title = 'Name', value=initial_variable1, options = list(categories[initial_category])),'select_variable1',['value'])
 
           # widgets for variable 2
-        self.register_widget(Select(title="View",  options=list(views.keys()), value = 'Minerals'),'select_view',['value'])
-        self.register_widget(Select(title = 'Biomarker Name', options = list(views['Minerals']), value='P (mmol/l)'),'select_variable2',['value'])
+        self.register_widget(Select(title="View",  options=self._views_with_columns(), value=initial_view),'select_view',['value'])
+        self.register_widget(Select(title = 'Biomarker Name', options = list(views[initial_view]), value=initial_variable2),'select_variable2',['value'])
 
         self.register_widget(Slider(start=10, end=300, value=30, step=1, title="Number of days to average variable 1 on"),"select_segmentation",['value'])
 
 
         # Segment and filter data for analysis
-        v1_segmented, v2_filtered = self.segment_and_filter_redundant_data('DistanceFitbit', 'Minerals', 'P (mmol/l)')
+        v1_segmented, v2_filtered = self.segment_and_filter_redundant_data(initial_variable1, initial_view, initial_variable2)
 
 
         self.new_data = {}
-        self.new_data['DistanceFitbit'] = v1_segmented
+        self.new_data[initial_variable1] = v1_segmented
 
         # Create ColumnDataSources for the plots
-        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"]),'y_values2' : numpy.nan_to_num(v2_filtered) })
-        self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : numpy.nan_to_num(v2_filtered),'y_values' : numpy.nan_to_num(self.new_data['DistanceFitbit']["segmented"])})
+        self.data_sources['raw_data'] = ColumnDataSource(data={'x_values' : self.bloodtest_dates,'y_values1' : numpy.nan_to_num(v1_segmented["segmented"]),'y_values2' : numpy.nan_to_num(v2_filtered) })
+        self.data_sources['source_corr'] = ColumnDataSource(data={'x_values' : numpy.nan_to_num(v1_segmented["segmented"]),'y_values' : numpy.nan_to_num(v2_filtered)})
         self.data_sources['source_corr_mean'] = ColumnDataSource(data={'x_values' : [],'y_values' : [], 'sem-' : [], 'sem+' : []})
 
 
         # PLOT 1 - the first plot for time series data
             # ranges of both variables
-        range1_start = numpy.nanmin(self.new_data['DistanceFitbit']['segmented']) - 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
-        range1_end = numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) + 0.1 * (numpy.nanmax(self.new_data['DistanceFitbit']['segmented']) - numpy.nanmin(self.new_data['DistanceFitbit']['segmented']))
+        range1_start = numpy.nanmin(v1_segmented['segmented']) - 0.1 * (numpy.nanmax(v1_segmented['segmented']) - numpy.nanmin(v1_segmented['segmented']))
+        range1_end = numpy.nanmax(v1_segmented['segmented']) + 0.1 * (numpy.nanmax(v1_segmented['segmented']) - numpy.nanmin(v1_segmented['segmented']))
         range2_start = numpy.nanmin(v2_filtered)-0.1*(numpy.nanmax(v2_filtered)-numpy.nanmin(v2_filtered))
         range2_end = numpy.nanmax(v2_filtered)+0.1*(numpy.nanmax(v2_filtered)-numpy.nanmin(v2_filtered))
 
 
         p1 = figure(width=300, height=320, sizing_mode="stretch_both", x_axis_type='datetime',
             y_range=(range1_start, range1_end),  tools="xpan",
-            x_range=(self.new_data['DistanceFitbit'].index[1].timestamp()*1000,
-                    self.new_data['DistanceFitbit'].index[-1].timestamp()*1000))
+            x_range=(v1_segmented.index[1].timestamp()*1000,
+                    v1_segmented.index[-1].timestamp()*1000))
 
         p1.extra_y_ranges = {"right" : Range1d(start=range2_start,end=range2_end)}
         p1.add_layout(LinearAxis(y_range_name="right"), 'right')
@@ -74,8 +79,8 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             # additional features
         p1.yaxis[0].major_label_text_color = "navy"
         p1.yaxis[1].major_label_text_color = "green"
-        p1.yaxis[0].axis_label = "DistanceFitbit"
-        p1.yaxis[1].axis_label = "P (mmol/l)"
+        p1.yaxis[0].axis_label = initial_variable1
+        p1.yaxis[1].axis_label = initial_variable2
         p1.toolbar_location = None
 
             # a RangeTool for interactive range selection on the x-axis.
@@ -100,8 +105,8 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             # a shaded area (varea) to represent the standard error of the mean (sem)
         p2.varea(x='x_values',y1='sem-',y2='sem+',source=self.data_sources['source_corr_mean'],color="black",alpha=0.1)
 
-        p2.xaxis.axis_label = "DistanceFitbit"
-        p2.yaxis.axis_label = "P (mmol/l)"
+        p2.xaxis.axis_label = initial_variable1
+        p2.yaxis.axis_label = initial_variable2
 
             # remove the toolbar from the plot, making it non-interactive
         p2.toolbar_location = None
@@ -112,6 +117,17 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
             # store the plot and the Slope annotation in the class for later reference
         self.plots['correlations'] = p2
         self.plots['correlations_slope'] = p2_slope 
+
+    def _views_with_columns(self):
+        return [name for name, frame in self.views.items() if len(frame.columns) > 0]
+
+    def _first_view_with_columns(self, preferred_view):
+        if preferred_view in self.views and len(self.views[preferred_view].columns) > 0:
+            return preferred_view
+        views_with_columns = self._views_with_columns()
+        if not views_with_columns:
+            raise ValueError("Blood-test correlation views need at least one non-empty view")
+        return views_with_columns[0]
             
 
     def compose_widgets(self):
@@ -170,7 +186,7 @@ class BloodTestsCorrelationsPanel(AnalysisPanel):
 
         for i in range(len(self.bloodtest_dates)):
             date = self.bloodtest_dates[i]
-            biomarker_entry = v2_filtered[i]
+            biomarker_entry = v2_filtered.iloc[i]
 
             # Ensure we only include dates with non-NaN data for both variables
             if pandas.isna(biomarker_entry):  # if entry of a biomarker is NaN, the corresponding 

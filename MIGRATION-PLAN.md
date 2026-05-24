@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 8 — Migrate correlation views.
+Milestone 9 — Migrate blood-test views.
 
 ---
 
@@ -94,7 +94,7 @@ Status: Done.
 - Shared UI/helper code:
   - `scripts.ui_framework.analysis_panel.AnalysisPanel` provides shared panel composition, update dispatch, and widget registration.
   - `scripts.ui_framework.paired_analysis.PairedAnalysis` provides the shared two-variable selector/data-source base used by comparison and event-based views.
-- Inactive/commented app area: `scripts.bloodtests_correlations.BloodTestsCorrelationsPanel` is imported but not currently included in `create_app.py`, so it remains outside active app-shell construction coverage.
+- Inactive/commented app area: `scripts.bloodtests_correlations.BloodTestsCorrelationsPanel` is migrated at module level but not currently included in `create_app.py`; manual review found it needs more work before being displayed.
 - Correlations construction is isolated at panel-build level only; expensive correlation recalculation is still user-triggered by the Recalculate button and is not exercised by this smoke milestone.
 
 ## Review note
@@ -406,7 +406,18 @@ Focus on event_based.py and comparison.py.
 
 # Milestone 8 — Migrate correlation views
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `scripts/bloodtests_correlations.py`, `tests/test_component_construction.py`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_correlations_panel_constructs -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py::test_correlations_panel_constructs tests/test_component_construction.py::test_correlations_panel_exposes_table_and_controls tests/test_component_construction.py::test_correlations_table_filter_updates_source tests/test_component_construction.py::test_blood_tests_correlations_panel_constructs tests/test_component_construction.py::test_blood_tests_correlations_panel_updates_sources -q`; `~/venvs/tracking/bin/python -m pytest tests/test_component_construction.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: focused correlation tests passed with 5 passed and 30 warnings; component construction tests passed with 15 passed and 78 warnings; full suite passed with 19 passed and 101 warnings.
+Remaining risks: coverage remains construction and callback smoke-level rather than manual visual review; the active correlations tab still does not exercise the expensive full recalculation in tests; `BloodTestsCorrelationsPanel` remains inactive/commented out in the app shell after manual review found the displayed view needs more work. Existing Tornado event-loop, pandas/date parsing, fragmentation, runtime, numpy, and blood-test table assignment warnings remain for later milestones.
+
+## Accepted note
+
+Accepted after review. Correlation view migration coverage is in place; next work should migrate the blood-test views.
 
 ## Objective
 
