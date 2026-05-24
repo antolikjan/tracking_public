@@ -585,7 +585,18 @@ Clean up only what is useful after the migration.
 
 # Optional Milestone 12 — Panel evaluation
 
-Status: Optional. Do not start unless explicitly requested.
+Status: Ready for review.
+
+## Review note
+
+Recommendation: keep raw Bokeh Server. The migrated app shell is small and already validated by cache-backed construction and browser smoke tests. Panel can display Bokeh models inside Panel apps and provides useful higher-level layout, template, server, and Param/reactive APIs, but adopting it here would add another framework dependency without solving a concrete current problem. Reconsider a Panel app-shell migration later only if the project needs Panel-specific features such as templates, lazy/dynamic Panel tabs, Param-generated controls, or deployment features beyond Bokeh Server.
+
+Files changed: `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest`.
+Test results: full pytest suite passed with 20 passed and 103 warnings.
+Remaining risks: this was an evaluation-only milestone; no Panel proof of concept was created because the existing Bokeh Server shell was sufficient and the researched benefits did not justify extra dependency/runtime churn. Existing warning noise remains unchanged.
+
+Research references: Panel Bokeh pane documentation (`https://panel.holoviz.org/reference/panes/Bokeh.html`), Panel server documentation (`https://panel.holoviz.org/how_to/server/index.html`, `https://panel.holoviz.org/how_to/server/commandline.html`), Panel Tabs documentation (`https://panel.holoviz.org/reference/layouts/Tabs.html`), Panel Param documentation (`https://panel.holoviz.org/explanation/api/param.html`), and Bokeh Server documentation (`https://docs.bokeh.org/en/latest/docs/user_guide/server.html`).
 
 ## Objective
 
@@ -598,7 +609,7 @@ Evaluation only unless explicitly approved.
 ## Expected work
 
 - Inspect whether the migrated Bokeh Server app is sufficient.
-- Identify specific pain points Panel would solve.
+- Identify specific pain points Panel would solve. Perform deep online search to determine if this brings any benefits.
 - Create a tiny proof of concept only if useful.
 - Do not rewrite the dashboard.
 - Do not migrate analysis logic.
