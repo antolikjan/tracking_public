@@ -18,7 +18,7 @@ The project currently runs as a Bokeh Server app and the README documents Bokeh 
 
 ## Current next milestone
 
-Milestone 11 — Final cleanup and run documentation.
+Optional Milestone 12 — Panel evaluation.
 
 ---
 
@@ -537,7 +537,18 @@ Run the full dashboard under Bokeh 3.x using cached data and test the main front
 
 # Milestone 11 — Final cleanup and run documentation
 
-Status: Not started.
+Status: Done.
+
+## Review note
+
+Files changed: `README.md`, `MIGRATION-PLAN.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest`; `~/venvs/tracking/bin/python -m bokeh serve main.py`.
+Test results: full suite passed with 20 passed and 103 warnings; `bokeh serve main.py` started successfully under Bokeh 3.9.0 at `http://localhost:5006/main` when local port binding was allowed.
+Remaining risks: startup validation did not open an Airtable-backed browser session; existing Tornado event-loop, pandas date parsing, dataframe fragmentation, runtime, and numpy warnings remain; no obsolete compatibility code was removed because the earlier Bokeh compatibility helper is already absent and no active references were found.
+
+## Accepted note
+
+Accepted after review. Final run documentation is in place and the modernized Bokeh stack has passing pytest and startup validation; remaining work is optional Panel evaluation only if requested.
 
 ## Objective
 
