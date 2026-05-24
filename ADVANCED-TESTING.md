@@ -20,7 +20,7 @@ This plan should:
 
 ## Current next milestone
 
-Milestone 2 — Core analysis function tests.
+Milestone 3 — Cache-backed analysis contract tests.
 
 ---
 
@@ -176,7 +176,7 @@ Optional sanity command:
 
 # Milestone 2 — Core analysis function tests
 
-Status: Not started.
+Status: Done.
 
 ## Objective
 
@@ -211,6 +211,17 @@ Focus on functions whose correctness can be asserted without Bokeh models, Airta
 
     python -m pytest tests/test_analysis_helpers.py -q
     python -m pytest
+
+## Review note
+
+Files changed: `tests/test_analysis_helpers.py`, `ADVANCED-TESTING.md`.
+Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_analysis_helpers.py -q`; `~/venvs/tracking/bin/python -m pytest`.
+Test results: focused helper tests passed with 14 passed and 5 warnings; full suite reported 33 passed, 1 failed, and 108 warnings. The failing test was the existing browser smoke test `tests/test_browser_smoke.py::test_bokeh_app_loads_in_browser`, which timed out waiting for the Bokeh document.
+Remaining risks: this milestone pins current helper behavior, including surprising overlap slice-stop semantics and event helper edge behavior, but does not fix those helpers. Existing warnings remain around empty-slice means, enrichment date parsing, dataframe fragmentation, Tornado event-loop handling, and masked-array division. The browser smoke timeout is outside this milestone and remains unresolved.
+
+## Accepted note
+
+Accepted after review. Deterministic tests now cover core analysis helpers; next work should add cache-backed analysis contract tests.
 
 ## Done when
 
