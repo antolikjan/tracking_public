@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import scipy.stats
 
 from scripts.data import (
     both_valid,
@@ -13,6 +14,7 @@ from scripts.data import (
     special_preprocessing_rules,
 )
 from scripts.data_enrichment import enrich_data
+from scripts.correlations import pairwise_regression_stats, past_gauss_filter_matrix
 
 
 def test_both_valid_removes_pairwise_nans_and_preserves_order():
@@ -76,6 +78,45 @@ def test_filter_data_past_and_future_gauss_use_asymmetric_windows():
     np.testing.assert_allclose(future_kernel, np.array([0.0, 1.0, np.exp(-0.5)]))
     np.testing.assert_allclose(past_result[0], data[0])
     np.testing.assert_allclose(future_result[-1], data[-1])
+
+
+def test_fast_past_gauss_matrix_matches_filter_data_for_2d_arrays():
+    data = np.array(
+        [
+            [1.0, np.nan],
+            [np.nan, 2.0],
+            [3.0, 4.0],
+            [4.0, np.nan],
+            [np.nan, 7.0],
+        ]
+    )
+
+    _, expected = filter_data("PastGauss", data, sig=1)
+
+    np.testing.assert_allclose(
+        past_gauss_filter_matrix(data, sig=1),
+        expected,
+        equal_nan=True,
+    )
+
+
+def test_pairwise_regression_stats_matches_linregress_overlap_behavior():
+    data = np.array(
+        [
+            [np.nan, np.nan, 5.0],
+            [1.0, np.nan, 4.0],
+            [2.0, 2.0, np.nan],
+            [3.0, 4.0, 2.0],
+            [4.0, 6.0, 1.0],
+            [np.nan, 8.0, np.nan],
+        ]
+    )
+
+    r, pvalue = pairwise_regression_stats(data, data, min_count=1, var_tol=0.0)
+    expected = scipy.stats.linregress(np.array([2.0, 3.0]), np.array([2.0, 4.0]))
+
+    np.testing.assert_allclose(r[0, 1], expected.rvalue)
+    np.testing.assert_allclose(pvalue[0, 1], expected.pvalue)
 
 
 def test_cross_corr_returns_none_without_positive_overlap():

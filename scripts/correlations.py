@@ -1,14 +1,13 @@
 from functools import partial
 from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource, Row, Column, Button, TableColumn, DataTable, Spacer, Slider, RadioButtonGroup, Select, DatePicker, Paragraph, Div, MultiChoice, HTMLTemplateFormatter, Paragraph, TabPanel
-from scripts.data import both_valid, data_aquisition_overlap_non_nans
 import scipy.stats
 import numpy
 import scripts.create_app
 import scripts.comparison
 from datetime import datetime
 from datetime import date
-from scripts.data import filter_data
+from scipy.signal import lfilter
 
 numpy.set_printoptions(threshold=numpy.inf)
 
@@ -34,6 +33,62 @@ acc_sigma = []
 
 
 data_table = None
+
+def past_gauss_filter_matrix(data,sig):
+    data = numpy.asarray(data,dtype=float)
+    kernel = numpy.exp(-numpy.power(numpy.arange(data.shape[0]),2.0)/(2*numpy.power(sig,2)))
+    valid = numpy.isfinite(data).astype(float)
+    filled = numpy.nan_to_num(data,nan=0.0)
+
+    numerator = lfilter(kernel,[1.0],filled,axis=0)
+    denominator = lfilter(kernel,[1.0],valid,axis=0)
+    result = numpy.full(data.shape,numpy.nan)
+    numpy.divide(numerator,denominator,out=result,where=denominator != 0)
+    return result
+
+def exclude_last_valid_observation(data):
+    result = numpy.array(data,dtype=float,copy=True)
+    valid = numpy.isfinite(result)
+    for col in range(result.shape[1]):
+        valid_indices = numpy.flatnonzero(valid[:,col])
+        if len(valid_indices) > 0:
+            result[valid_indices[-1],col] = numpy.nan
+    return result
+
+def pairwise_regression_stats(data1,data2,min_count,var_tol):
+    data1 = exclude_last_valid_observation(data1)
+    data2 = exclude_last_valid_observation(data2)
+
+    valid1 = numpy.isfinite(data1).astype(float)
+    valid2 = numpy.isfinite(data2).astype(float)
+    filled1 = numpy.nan_to_num(data1,nan=0.0)
+    filled2 = numpy.nan_to_num(data2,nan=0.0)
+
+    count = valid1.T @ valid2
+    sum1 = filled1.T @ valid2
+    sum2 = valid1.T @ filled2
+    sum1_sq = numpy.square(filled1).T @ valid2
+    sum2_sq = valid1.T @ numpy.square(filled2)
+    sum12 = filled1.T @ filled2
+
+    r = numpy.full(count.shape,numpy.nan)
+    p = numpy.full(count.shape,numpy.nan)
+    valid_count = count > min_count
+
+    with numpy.errstate(invalid='ignore',divide='ignore'):
+        ss1 = sum1_sq - numpy.square(sum1) / count
+        ss2 = sum2_sq - numpy.square(sum2) / count
+        covariance = sum12 - (sum1 * sum2) / count
+        valid = numpy.logical_and(valid_count,numpy.logical_and(ss1 > var_tol,ss2 > var_tol))
+        numpy.divide(covariance,numpy.sqrt(ss1 * ss2),out=r,where=valid)
+        r = numpy.clip(r,-1.0,1.0)
+        degrees_of_freedom = count - 2
+        t_stat = r * numpy.sqrt(degrees_of_freedom / (1 - numpy.square(r)))
+        p_values = 2 * scipy.stats.t.sf(numpy.abs(t_stat),degrees_of_freedom)
+
+    p[valid] = p_values[valid]
+    p[numpy.logical_and(valid,numpy.abs(r) == 1.0)] = 0.0
+    return r,p
 
 def correlation_analysis(data,metadata,source,relationships):
     val1.clear()
@@ -62,48 +117,33 @@ def correlation_analysis(data,metadata,source,relationships):
     #prepare the convolved data
     sigmas = [2,4,8,16,32,64,128,256]
     convolved = []
+    selected_data = data.loc[selected_range,:].to_numpy(float)
     for s in sigmas:
-        print(s)
-        print(data.loc[selected_range,:].to_numpy().shape)
-        convolved.append(filter_data('PastGauss',data.loc[selected_range,:].to_numpy(),s)[1])
+        convolved.append(past_gauss_filter_matrix(selected_data,s))
+
+    r_nosh,p_nosh = pairwise_regression_stats(selected_data,selected_data,20,0.0)
+    r_v2_pr_v1,p_v2_pr_v1 = pairwise_regression_stats(selected_data[1:,:],selected_data[:-1,:],20,0.0)
+    r_v1_pr_v2,p_v1_pr_v2 = pairwise_regression_stats(selected_data[:-1,:],selected_data[1:,:],20,0.0)
+    accumulation_stats = [
+        pairwise_regression_stats(convolved_data,selected_data,4,0.00000000000000001)
+        for convolved_data in convolved
+    ]
 
     for i in range(len(cols)):
-        print(i)
         for j in range(i+1,len(cols)): 
 
             # make sure both variables are numeric
             if metadata['Units'].loc[cols[i]] != 'string' and metadata['Units'].loc[cols[j]] != 'string':
 
-                    x = data[cols[i]][selected_range].to_numpy()
-                    y = data[cols[j]][selected_range].to_numpy()
-
-                    # let's calculate the correlations only for positions where both values are defined and 
-                    d1,d2 = data_aquisition_overlap_non_nans(x,y)
-                    d1_shift1,d2_shift1 = data_aquisition_overlap_non_nans(x[1:],y[:-1])
-                    d1_shift2,d2_shift2 = data_aquisition_overlap_non_nans(x[:-1],y[1:])
-
-                    # we will not calculate correlations if variance of one of the variables within overlapping positions is zero
-                    # and we will not compute correlations if there are less then 21 points of overlap between the two data vectors
-                    if len(d1) > 20 and numpy.var(d1) != 0 and numpy.var(d2) != 0:
-                            res1 = scipy.stats.linregress(d1,d2)
-                    else:
-                            res1 = None
-
-                    if len(d1_shift1) > 20 and numpy.var(d1_shift1) != 0 and numpy.var(d2_shift1) != 0:
-                            res2 = scipy.stats.linregress(d1_shift1,d2_shift1)
-                    else:
-                            res2 = None
-
-                    if len(d1_shift2) > 20 and numpy.var(d1_shift2) != 0 and numpy.var(d2_shift2) != 0:
-                            res3 = scipy.stats.linregress(d1_shift2,d2_shift2)
-                    else:
-                            res3 = None
+                    res1 = None if numpy.isnan(p_nosh[i,j]) else (r_nosh[i,j],p_nosh[i,j])
+                    res2 = None if numpy.isnan(p_v2_pr_v1[i,j]) else (r_v2_pr_v1[i,j],p_v2_pr_v1[i,j])
+                    res3 = None if numpy.isnan(p_v1_pr_v2[i,j]) else (r_v1_pr_v2[i,j],p_v1_pr_v2[i,j])
 
                     res = None                       
-                    if res1 != None and (res2 == None or res1.pvalue < res2.pvalue) and (res3 == None or res1.pvalue < res3.pvalue):
+                    if res1 != None and (res2 == None or res1[1] < res2[1]) and (res3 == None or res1[1] < res3[1]):
                        res = res1
                        shi = '=='
-                    elif res2 != None and (res3 == None or res2.pvalue < res3.pvalue):  
+                    elif res2 != None and (res3 == None or res2[1] < res3[1]):  
                        res = res2
                        shi = 'Var2 -> Var1'
                     elif res3 != None:
@@ -113,22 +153,22 @@ def correlation_analysis(data,metadata,source,relationships):
 
                     if res != None:
                        if res1 != None:
-                         rs_nosh.append(res1.rvalue)
-                         pvals_nosh.append(res1.pvalue)
+                         rs_nosh.append(res1[0])
+                         pvals_nosh.append(res1[1])
                        else:
                          rs_nosh.append(None)
                          pvals_nosh.append(None)
 
                        if res2 != None:
-                          rs_v2_pr_v1.append(res2.rvalue)
-                          pvals_v2_pr_v1.append(res2.pvalue)
+                          rs_v2_pr_v1.append(res2[0])
+                          pvals_v2_pr_v1.append(res2[1])
                        else:
                           rs_v2_pr_v1.append(None)
                           pvals_v2_pr_v1.append(None)
 
                        if res3 != None:
-                          rs_v1_pr_v2.append(res3.rvalue)
-                          pvals_v1_pr_v2.append(res3.pvalue)
+                          rs_v1_pr_v2.append(res3[0])
+                          pvals_v1_pr_v2.append(res3[1])
                        else:
                           rs_v1_pr_v2.append(None)
                           pvals_v1_pr_v2.append(None)
@@ -144,8 +184,8 @@ def correlation_analysis(data,metadata,source,relationships):
                        shift.append(shi)
                        val1.append(cols[i])
                        val2.append(cols[j])
-                       rs.append(res.rvalue)
-                       pvals.append(res.pvalue)
+                       rs.append(res[0])
+                       pvals.append(res[1])
                     else:
                        shift.append('x')
                        val1.append(cols[i])
@@ -162,31 +202,19 @@ def correlation_analysis(data,metadata,source,relationships):
                     for s in range(len(sigmas)): 
 
                         # first one direction
-                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,i],y)
-
-                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d1)>= 5:
-
-                            res = scipy.stats.linregress(d1,d2)
-                            if cols[i] == 'Tossing & Turning' and cols[j] == 'Chocolate (only cocoa part in grams)':
-                                print((res.pvalue,res.rvalue))
-        
-                            if res.pvalue < best_p:
-                                    best_p = res.pvalue
-                                    best_r = res.rvalue
-                                    best_sigma = sigmas[s]
-                                    best_dir = 'Var1 -> Var2'
+                        r_acc,p_acc = accumulation_stats[s]
+                        if not numpy.isnan(p_acc[i,j]) and p_acc[i,j] < best_p:
+                            best_p = p_acc[i,j]
+                            best_r = r_acc[i,j]
+                            best_sigma = sigmas[s]
+                            best_dir = 'Var1 -> Var2'
     
                         # then the second direction
-                        d1,d2 = data_aquisition_overlap_non_nans(convolved[s][:,j],x)
-
-                        if numpy.var(d1) > 0.00000000000000001 and numpy.var(d2) > 0.00000000000000001 and len(d2)>= 5:
-                            res = scipy.stats.linregress(d1,d2)
-        
-                            if res.pvalue < best_p:
-                                best_p = res.pvalue
-                                best_r = res.rvalue
-                                best_sigma = sigmas[s]
-                                best_dir = 'Var2 -> Var1'
+                        if not numpy.isnan(p_acc[j,i]) and p_acc[j,i] < best_p:
+                            best_p = p_acc[j,i]
+                            best_r = r_acc[j,i]
+                            best_sigma = sigmas[s]
+                            best_dir = 'Var2 -> Var1'
 
                     acc_p.append(best_p)
                     acc_r.append(best_r)
@@ -217,9 +245,6 @@ def set_table(attr, old, new, source,relationships):
 
         select = numpy.logical_and(select1,numpy.logical_and(select2,select3))
 
-        print(len(pvals))                    
-        print(len(pvals_nosh))
-        print(len(acc_p))     
         source.data = {'Variable 1' : numpy.array(val1)[select], 
                        'Variable 2' : numpy.array(val2)[select], 
                        'R' : numpy.nan_to_num(rs)[select], 
