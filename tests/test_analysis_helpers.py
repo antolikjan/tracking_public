@@ -157,8 +157,12 @@ def test_enrich_data_adds_calendar_columns_categories_and_metadata_rows():
     assert list(df["Month"]) == [1, 1]
     assert categories["Measurements"] == ["Existing", "Week day", "Weekend", "Month"]
     assert metadata.loc["Week day", "Category"] == "Measurements"
+    assert metadata.loc["Week day", "Units"] == "enum"
+    assert metadata.loc["Week day", "Enum index start"] == 0
     assert metadata.loc["Weekend", "Default"] == 0
+    assert metadata.loc["Weekend", "Enum order"] == "Weekday;Weekend"
     assert metadata.loc["Month", "Intervention"] == "Intervention"
+    assert metadata.loc["Month", "Enum order"].startswith("January;February")
 
 
 def test_special_preprocessing_rules_invalidates_fitbit_values_when_steps_are_low():

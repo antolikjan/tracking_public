@@ -9,7 +9,7 @@ import scripts.data as data
 import scripts.relationships as relationships_view
 from scripts.blood_tests import BloodTests
 from scripts.bloodtests_correlations import BloodTestsCorrelationsPanel
-from scripts.comparison import ComparisonPanel
+from scripts.comparison import ComparisonPanel, categorical_value_label
 from scripts.create_app import create_app
 from scripts.event_based import EventBasedAnalysisPanel
 from scripts.relationship_metadata import RelationshipMetadata
@@ -202,6 +202,35 @@ def test_comparison_bar_plot_hover_renders_p_value_html(cached_tracking_data):
     assert "@pval{safe}" in hover_tools[0].tooltips
 
 
+def test_comparison_bar_plot_uses_enum_labels_for_encoded_categories():
+    metadata = pd.DataFrame(
+        {
+            "Units": {"Mood": "enum", "Steps": "count"},
+            "Enum order": {"Mood": "Low;Medium;High", "Steps": None},
+            "Enum index start": {"Mood": 1, "Steps": None},
+        }
+    )
+
+    assert categorical_value_label(metadata, "Mood", 1.0) == "Low"
+    assert categorical_value_label(metadata, "Mood", 2.0) == "Medium"
+    assert categorical_value_label(metadata, "Mood", 3.0) == "High"
+    assert categorical_value_label(metadata, "Steps", 1.0) == "1.0"
+    assert categorical_value_label(metadata, "Mood", 99.0) == "99.0"
+
+
+def test_comparison_bar_plot_supports_zero_based_enriched_enum_labels():
+    metadata = pd.DataFrame(
+        {
+            "Units": {"Weekend": "enum"},
+            "Enum order": {"Weekend": "Weekday;Weekend"},
+            "Enum index start": {"Weekend": 0},
+        }
+    )
+
+    assert categorical_value_label(metadata, "Weekend", 0.0) == "Weekday"
+    assert categorical_value_label(metadata, "Weekend", 1.0) == "Weekend"
+
+
 def test_comparison_panel_updates_filtered_and_bar_views(cached_tracking_data):
     df, metadata, categories = cached_tracking_data
     comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
@@ -218,6 +247,42 @@ def test_comparison_panel_updates_filtered_and_bar_views(cached_tracking_data):
     assert comparison_panel.plots["filtered_line1"].visible
     assert comparison_panel.plots["filtered_line2"].visible
     assert len(comparison_panel.data_sources["source_corr"].data["x_values"]) > 0
+
+
+def test_comparison_bar_plot_uses_raw_enum_categories_when_filter_is_active(
+    cached_tracking_data,
+):
+    df, metadata, categories = cached_tracking_data
+    if "Mushrooms type" not in df.columns:
+        pytest.skip("Cached data does not include Mushrooms type")
+
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    comparison_panel.compose_panel()
+
+    comparison_panel.ui_elements["select_category1"].value = metadata.loc[
+        "Mushrooms type", "Category"
+    ]
+    comparison_panel.ui_elements["select_variable1"].value = "Mushrooms type"
+    comparison_panel.ui_elements["select_category2"].value = "Fitbit"
+    comparison_panel.ui_elements["select_variable2"].value = "RHR"
+    comparison_panel.ui_elements["select_filter1"].value = "Gauss"
+    comparison_panel.ui_elements["show_bars_button"].active = True
+
+    comparison_panel.update("value", None, None)
+
+    assert comparison_panel.bar_plot_flag
+    assert comparison_panel.plots["bar_plot"].visible
+    assert comparison_panel.plots["bar_plot"].x_range.factors == [
+        "Wild",
+        "Shitake",
+        "Shimeji",
+        "Enoki",
+        "Button mushroom",
+        "Oyster mushroom",
+        "Woodear",
+        "Chanterelles",
+        "Hericium",
+    ]
 
 
 def test_event_based_panel_constructs(cached_tracking_data):

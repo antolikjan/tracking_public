@@ -7,6 +7,43 @@ import numpy, scipy
 from scripts.ui_framework.paired_analysis import PairedAnalysis
 import scipy.stats
 
+BAR_PLOT_MAX_CATEGORIES = 13
+
+
+def is_enum_variable(metadata, variable):
+      return variable in metadata.index and metadata['Units'].loc[variable] == 'enum'
+
+
+def categorical_value_label(metadata, variable, value):
+      if variable not in metadata.index:
+            return str(value)
+      if not is_enum_variable(metadata, variable):
+            return str(value)
+      if 'Enum order' not in metadata.columns:
+            return str(value)
+
+      enum_order = metadata['Enum order'].loc[variable]
+      if not isinstance(enum_order, str):
+            return str(value)
+
+      try:
+            index = int(value)
+      except (TypeError, ValueError):
+            return str(value)
+
+      levels = enum_order.split(';')
+      enum_index_start = 1
+      if 'Enum index start' in metadata.columns:
+            configured_start = metadata['Enum index start'].loc[variable]
+            if configured_start == configured_start:
+                  enum_index_start = int(configured_start)
+
+      label_index = index - enum_index_start
+      if label_index < 0 or label_index >= len(levels):
+            return str(value)
+      return levels[label_index]
+
+
 class ComparisonPanel(PairedAnalysis):
 
       def __init__(self,data,categories,metadata,title):
@@ -125,6 +162,7 @@ class ComparisonPanel(PairedAnalysis):
           super().update_data()
 
           selected_range = numpy.logical_and(self.raw_data.index.asi8 >= self.ui_elements['range_tool_x_range'].start*1000000,self.raw_data.index.asi8 <= self.ui_elements['range_tool_x_range'].end*1000000) 
+          comparison_selected_range = selected_range
           d1,d2 = both_valid(self.data_sources['raw_data'].data['y_values_post_processed1'][selected_range],self.data_sources['raw_data'].data['y_values_post_processed2'][selected_range])
 
           self.data_sources['source_corr'].data = {'x_values' : d1 , 'y_values' : d2}
@@ -156,29 +194,43 @@ class ComparisonPanel(PairedAnalysis):
 
 
           # update bar plot data if relevant
-          y1,y2 = data_aquisition_overlap_non_nans(self.data_sources['source_corr'].data['x_values'],self.data_sources['source_corr'].data['y_values'])
+          if is_enum_variable(self.metadata, self.ui_elements["select_variable1"].value):
+             bar_data1 = self.data_sources['raw_data'].data['y_values1'][comparison_selected_range]
+          else:
+             bar_data1 = self.data_sources['raw_data'].data['y_values_post_processed1'][comparison_selected_range]
 
-          if (len(set(y1)) < 13 or len(set(y2)) < 13) and self.ui_elements["show_bars_button"].active:
+          if is_enum_variable(self.metadata, self.ui_elements["select_variable2"].value):
+             bar_data2 = self.data_sources['raw_data'].data['y_values2'][comparison_selected_range]
+          else:
+             bar_data2 = self.data_sources['raw_data'].data['y_values_post_processed2'][comparison_selected_range]
+
+          y1,y2 = data_aquisition_overlap_non_nans(bar_data1,bar_data2)
+
+          if (len(set(y1)) < BAR_PLOT_MAX_CATEGORIES or len(set(y2)) < BAR_PLOT_MAX_CATEGORIES) and self.ui_elements["show_bars_button"].active:
              self.bar_plot_flag = True      
              self.bar_plot_x_axis_flag = False
+             bar_variable = self.ui_elements["select_variable1"].value
              if len(set(y1)) > len(set(y2)):
                 self.bar_plot_x_axis_flag = True
+                bar_variable = self.ui_elements["select_variable2"].value
                 y1,y2 = y2,y1
-             factors= [str(x) for x in sorted(set(y1))]
-             mean = numpy.array([numpy.mean(y2[y1==z]) for z in sorted(set(y1))])
-             sem =  numpy.array([numpy.std(y2[y1==z], ddof=1) / numpy.sqrt(numpy.size(y2[y1==z])) for z in sorted(set(y1))])    
+             values = sorted(set(y1))
+             factors= [categorical_value_label(self.metadata, bar_variable, x) for x in values]
+             mean = numpy.array([numpy.mean(y2[y1==z]) for z in values])
+             sem =  numpy.array([numpy.std(y2[y1==z], ddof=1) / numpy.sqrt(numpy.size(y2[y1==z])) for z in values])    
              # calculate student t-test for each pair of variables
              p_values = []             
-             for x in sorted(set(y1)):
+             for x in values:
                  p = ''
-                 for y in sorted(set(y1)):
+                 for y in values:
                         if x != y and len(y2[y1==x]) > 2 and len(y2[y1==y]):
                           a = scipy.stats.ttest_ind(y2[y1==x],y2[y1==y]).pvalue
                           if not numpy.isnan(a):
+                            label = categorical_value_label(self.metadata, bar_variable, y)
                             if a > 0.01:
-                               p += '<p> <span style="font-weight:bold"> %s </span> : <span style="color:red">%gf</span> </p>' % (y,a)
+                               p += '<p> <span style="font-weight:bold"> %s </span> : <span style="color:red">%gf</span> </p>' % (label,a)
                             else:
-                               p += '<p> <span style="font-weight:bold"> %s </span> : <span style="color:green">%g</span> </p>' % (y,a)
+                               p += '<p> <span style="font-weight:bold"> %s </span> : <span style="color:green">%g</span> </p>' % (label,a)
                  p_values.append(p)
 
              self.data_sources['source_bar_plot'].data = {'x' : factors,'mean' : mean ,'sem-' : mean-sem, 'sem+' : mean+sem,'pval' : p_values}
