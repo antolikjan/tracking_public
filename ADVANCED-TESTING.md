@@ -20,7 +20,7 @@ This plan should:
 
 ## Current next milestone
 
-Milestone 3 — Cache-backed analysis contract tests.
+No remaining incomplete milestones.
 
 ---
 
@@ -234,7 +234,7 @@ Accepted after review. Deterministic tests now cover core analysis helpers; next
 
 # Milestone 3 — Cache-backed analysis contract tests
 
-Status: Ready for review.
+Status: Done.
 
 ## Review note
 
@@ -242,6 +242,10 @@ Files changed: `tests/test_cached_analysis_contracts.py`, `ADVANCED-TESTING.md`.
 Commands run: `~/venvs/tracking/bin/python -m pytest tests/test_analysis_helpers.py tests/test_cached_analysis_contracts.py -q`; `~/venvs/tracking/bin/python -m pytest`.
 Test results: focused helper and cache-contract validation passed with 19 passed and 30 warnings; full suite passed with 39 passed and 133 warnings.
 Remaining risks: tests rely on local pickle caches and skip when optional cache files are missing; they validate structure and analysis compatibility without asserting exact private values. Existing warnings remain around empty-slice means, enrichment date parsing, dataframe fragmentation, Tornado event-loop handling, and masked-array division.
+
+## Accepted note
+
+Accepted after review. Cache-backed analysis contract tests now cover cached dataframe, metadata, category, blood-test, relationship metadata, and analysis-helper compatibility assumptions without asserting private values.
 
 ## Objective
 

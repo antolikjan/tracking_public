@@ -50,8 +50,7 @@ class RelationshipRecorder:
 
 def require_cache_files(*paths):
     missing = [str(path.relative_to(ROOT)) for path in paths if not path.exists()]
-    if missing:
-        pytest.skip("Missing local cache file(s): " + ", ".join(missing))
+    assert not missing, "Missing local cache file(s): " + ", ".join(missing)
 
 
 @pytest.fixture
