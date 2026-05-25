@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import pytest
-from bokeh.models import Button, ColumnDataSource, DataTable, Select, TabPanel, Tabs
+from bokeh.models import Button, ColumnDataSource, DataTable, HoverTool, Select, TabPanel, Tabs
 
 import scripts.correlations as correlations
 import scripts.data as data
@@ -190,6 +190,16 @@ def test_comparison_panel_constructs(cached_tracking_data):
     panel = ComparisonPanel(df, categories, metadata, "Comparison").compose_panel()
 
     assert_panel(panel, "Comparison")
+
+
+def test_comparison_bar_plot_hover_renders_p_value_html(cached_tracking_data):
+    df, metadata, categories = cached_tracking_data
+
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    hover_tools = comparison_panel.plots["bar_plot"].select(type=HoverTool)
+
+    assert len(hover_tools) == 1
+    assert "@pval{safe}" in hover_tools[0].tooltips
 
 
 def test_comparison_panel_updates_filtered_and_bar_views(cached_tracking_data):

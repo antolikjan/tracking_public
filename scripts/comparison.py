@@ -106,7 +106,7 @@ class ComparisonPanel(PairedAnalysis):
             p4.toolbar_location = None
             self.plots['cross_correlations'] = p4
 
-            hover = HoverTool(tooltips="<p style='font-weight:bold'>p-value vs. others:</p><div>@pval</div>")
+            hover = HoverTool(tooltips="<p style='font-weight:bold'>p-value vs. others:</p><div>@pval{safe}</div>")
             bp = figure(height=300, width=300,sizing_mode="stretch_both",toolbar_location=None, x_range=FactorRange(*['1','2','3']), tools=[hover])
             bp.vbar(x='x', top='mean', width=0.3, source=self.data_sources['source_bar_plot'])
             bp.add_layout(Whisker(source=self.data_sources['source_bar_plot'], base="x", upper="sem-", lower="sem+", level="overlay"))
