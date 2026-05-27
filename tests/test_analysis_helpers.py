@@ -8,6 +8,7 @@ from scripts.data import (
     cross_corr,
     data_aquisition_overlap,
     data_aquisition_overlap_non_nans,
+    detrend_dataframe,
     event_triggered_change,
     event_weighted_average,
     filter_data,
@@ -98,6 +99,62 @@ def test_fast_past_gauss_matrix_matches_filter_data_for_2d_arrays():
         expected,
         equal_nan=True,
     )
+
+
+def test_detrend_dataframe_removes_linear_trends_and_preserves_nans():
+    df = pd.DataFrame(
+        {
+            "Linear": [1.0, 3.0, np.nan, 7.0, 9.0],
+            "Offset": [5.0, 5.5, 6.0, 6.5, 7.0],
+        },
+        index=pd.date_range("2024-01-01", periods=5),
+    )
+
+    detrended = detrend_dataframe(df)
+
+    assert list(detrended.index) == list(df.index)
+    assert list(detrended.columns) == list(df.columns)
+    np.testing.assert_allclose(
+        detrended["Linear"].to_numpy(),
+        np.array([0.0, 0.0, np.nan, 0.0, 0.0]),
+        atol=1e-12,
+        equal_nan=True,
+    )
+    np.testing.assert_allclose(detrended["Offset"].to_numpy(), np.zeros(5), atol=1e-12)
+
+
+def test_detrend_dataframe_skips_semantic_and_degenerate_columns():
+    df = pd.DataFrame(
+        {
+            "Continuous": [1.0, 2.0, 5.0, 10.0],
+            "Enum": [1.0, 2.0, 1.0, 2.0],
+            "Bool": [0.0, 1.0, 0.0, 1.0],
+            "String": [1.0, 2.0, 3.0, 4.0],
+            "TooShort": [np.nan, 1.0, np.nan, np.nan],
+            "AllNaN": [np.nan, np.nan, np.nan, np.nan],
+        }
+    )
+    metadata = pd.DataFrame(
+        {
+            "Units": {
+                "Continuous": "count",
+                "Enum": "enum",
+                "Bool": "bool",
+                "String": "string",
+                "TooShort": "count",
+                "AllNaN": "count",
+            }
+        }
+    )
+
+    detrended = detrend_dataframe(df, metadata)
+
+    assert not np.allclose(detrended["Continuous"], df["Continuous"])
+    pd.testing.assert_series_equal(detrended["Enum"], df["Enum"])
+    pd.testing.assert_series_equal(detrended["Bool"], df["Bool"])
+    pd.testing.assert_series_equal(detrended["String"], df["String"])
+    pd.testing.assert_series_equal(detrended["TooShort"], df["TooShort"])
+    pd.testing.assert_series_equal(detrended["AllNaN"], df["AllNaN"])
 
 
 def test_pairwise_regression_stats_matches_linregress_overlap_behavior():

@@ -241,6 +241,75 @@ def filter_data(type,data,sig):
         result = numpy.array([numpy.ma.average(d,weights=fff(ls,sig,i),axis=0).filled(numpy.nan) for i in ls])
     return filtr,result
 
+def detrend_dataframe(df, metadata=None, columns=None):
+    result = df.copy()
+    if columns is None:
+        columns = list(df.columns)
+    else:
+        columns = [column for column in columns if column in df.columns]
+
+    if len(columns) == 0:
+        return result
+
+    eligible_columns = list(columns)
+    if metadata is not None and "Units" in metadata.columns:
+        units = metadata.reindex(eligible_columns)["Units"]
+        semantic_units = {"string", "enum", "bool"}
+        eligible_columns = [
+            column
+            for column in eligible_columns
+            if units.loc[column] not in semantic_units
+        ]
+
+    numeric = result[eligible_columns].apply(pd.to_numeric, errors="coerce")
+    eligible_columns = [
+        column
+        for column in eligible_columns
+        if not numeric[column].isna().all()
+    ]
+    if len(eligible_columns) == 0:
+        return result
+
+    data = numeric[eligible_columns].to_numpy(dtype=float)
+    finite = numpy.isfinite(data)
+    count = finite.sum(axis=0)
+    valid_columns = count >= 2
+    if not valid_columns.any():
+        return result
+
+    x = numpy.arange(len(result), dtype=float)[:, None]
+    filled = numpy.nan_to_num(data, nan=0.0)
+
+    sum_x = (finite * x).sum(axis=0)
+    sum_y = filled.sum(axis=0)
+    sum_xx = (finite * x * x).sum(axis=0)
+    sum_xy = (filled * x).sum(axis=0)
+    denominator = count * sum_xx - sum_x * sum_x
+    valid_columns = numpy.logical_and(valid_columns, denominator != 0)
+    if not valid_columns.any():
+        return result
+
+    slope = numpy.zeros(data.shape[1])
+    intercept = numpy.zeros(data.shape[1])
+    slope[valid_columns] = (
+        count[valid_columns] * sum_xy[valid_columns]
+        - sum_x[valid_columns] * sum_y[valid_columns]
+    ) / denominator[valid_columns]
+    intercept[valid_columns] = (
+        sum_y[valid_columns] - slope[valid_columns] * sum_x[valid_columns]
+    ) / count[valid_columns]
+
+    detrended = data.copy()
+    trend = x @ slope[None, :] + intercept
+    detrended[:, valid_columns] = data[:, valid_columns] - trend[:, valid_columns]
+    detrended[~finite] = numpy.nan
+
+    valid_column_names = [
+        column for column, valid in zip(eligible_columns, valid_columns) if valid
+    ]
+    result.loc[:, valid_column_names] = detrended[:, valid_columns]
+    return result
+
 def data_aquisition_overlap(data1,data2):
    
     if len(numpy.argwhere(numpy.logical_not(numpy.isnan(numpy.array(data2))))) == 0 or len(numpy.argwhere(numpy.logical_not(numpy.isnan(numpy.array(data1))))) == 0:

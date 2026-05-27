@@ -48,20 +48,6 @@ If shell activation is unreliable, use the venv Python directly:
 
 Do not create a new virtual environment unless explicitly asked.
 
-## Working style
-
-For each milestone:
-
-1. Read MIGRATION-PLAN.md.
-2. Inspect the current repository state.
-3. Propose a concrete implementation plan for the next incomplete milestone.
-4. Do not edit code until the plan is approved.
-5. Implement only the approved milestone.
-6. Run the relevant validation commands.
-7. Summarize files changed, tests added, commands run, failures, and risks.
-8. Update MIGRATION-PLAN.md only to mark progress and record important notes.
-9. Stop after the current milestone.
-
 ## Research
 
 Internet access may be used when helpful, especially for:

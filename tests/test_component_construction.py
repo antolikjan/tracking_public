@@ -1,8 +1,18 @@
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 import pytest
-from bokeh.models import Button, ColumnDataSource, DataTable, HoverTool, Select, TabPanel, Tabs
+from bokeh.models import (
+    Button,
+    CheckboxGroup,
+    ColumnDataSource,
+    DataTable,
+    HoverTool,
+    Select,
+    TabPanel,
+    Tabs,
+)
 
 import scripts.correlations as correlations
 import scripts.data as data
@@ -192,6 +202,19 @@ def test_comparison_panel_constructs(cached_tracking_data):
     assert_panel(panel, "Comparison")
 
 
+def test_comparison_panel_exposes_per_variable_detrend_checkbox(cached_tracking_data):
+    df, metadata, categories = cached_tracking_data
+
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+
+    assert isinstance(comparison_panel.ui_elements["detrend_checkbox"], CheckboxGroup)
+    assert comparison_panel.ui_elements["detrend_checkbox"].labels == [
+        "Detrend A",
+        "Detrend B",
+    ]
+    assert comparison_panel.ui_elements["detrend_checkbox"].active == []
+
+
 def test_comparison_bar_plot_hover_renders_p_value_html(cached_tracking_data):
     df, metadata, categories = cached_tracking_data
 
@@ -249,6 +272,66 @@ def test_comparison_panel_updates_filtered_and_bar_views(cached_tracking_data):
     assert len(comparison_panel.data_sources["source_corr"].data["x_values"]) > 0
 
 
+def test_comparison_panel_can_detrend_each_variable_independently():
+    index = pd.date_range("2024-01-01", periods=6)
+    df = pd.DataFrame(
+        {
+            "DistanceFitbit": [1.0, 3.0, 5.0, 7.0, 9.0, 11.0],
+            "RHR": [10.0, 13.0, 16.0, 19.0, 22.0, 25.0],
+        },
+        index=index,
+    )
+    metadata = pd.DataFrame(
+        {
+            "Category": {"DistanceFitbit": "Fitbit", "RHR": "Fitbit"},
+            "Units": {"DistanceFitbit": "count", "RHR": "count"},
+        }
+    )
+    categories = {"Fitbit": ["DistanceFitbit", "RHR"]}
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    comparison_panel.compose_panel()
+
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values1"],
+        df["DistanceFitbit"].to_numpy(),
+    )
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values2"],
+        df["RHR"].to_numpy(),
+    )
+
+    comparison_panel.ui_elements["detrend_checkbox"].active = [0]
+    comparison_panel.update("active", [], [0])
+
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values1"],
+        np.zeros(len(df)),
+        atol=1e-12,
+    )
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values2"],
+        df["RHR"].to_numpy(),
+    )
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values_post_processed1"],
+        np.zeros(len(df)),
+        atol=1e-12,
+    )
+
+    comparison_panel.ui_elements["detrend_checkbox"].active = [1]
+    comparison_panel.update("active", [0], [1])
+
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values1"],
+        df["DistanceFitbit"].to_numpy(),
+    )
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values2"],
+        np.zeros(len(df)),
+        atol=1e-12,
+    )
+
+
 def test_comparison_bar_plot_uses_raw_enum_categories_when_filter_is_active(
     cached_tracking_data,
 ):
@@ -283,6 +366,39 @@ def test_comparison_bar_plot_uses_raw_enum_categories_when_filter_is_active(
         "Chanterelles",
         "Hericium",
     ]
+
+
+def test_comparison_detrending_keeps_enum_and_bool_values_raw():
+    index = pd.date_range("2024-01-01", periods=6)
+    df = pd.DataFrame(
+        {
+            "DistanceFitbit": [1.0, 2.0, 1.0, 2.0, 1.0, 2.0],
+            "RHR": [0.0, 1.0, 0.0, 1.0, 0.0, 1.0],
+        },
+        index=index,
+    )
+    metadata = pd.DataFrame(
+        {
+            "Category": {"DistanceFitbit": "Fitbit", "RHR": "Fitbit"},
+            "Units": {"DistanceFitbit": "enum", "RHR": "bool"},
+            "Enum order": {"DistanceFitbit": "Low;High", "RHR": None},
+        }
+    )
+    categories = {"Fitbit": ["DistanceFitbit", "RHR"]}
+    comparison_panel = ComparisonPanel(df, categories, metadata, "Comparison")
+    comparison_panel.compose_panel()
+
+    comparison_panel.ui_elements["detrend_checkbox"].active = [0]
+    comparison_panel.update("active", [], [0])
+
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values1"],
+        df["DistanceFitbit"].to_numpy(),
+    )
+    np.testing.assert_allclose(
+        comparison_panel.data_sources["raw_data"].data["y_values2"],
+        df["RHR"].to_numpy(),
+    )
 
 
 def test_event_based_panel_constructs(cached_tracking_data):

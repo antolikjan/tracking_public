@@ -47,7 +47,7 @@ def categorical_value_label(metadata, variable, value):
 class ComparisonPanel(PairedAnalysis):
 
       def __init__(self,data,categories,metadata,title):
-            PairedAnalysis.__init__(self,data,categories,metadata,title)
+            PairedAnalysis.__init__(self,data,categories,metadata,title,enable_detrending=True)
             self.bar_plot_x_axis_flag = False
 
 
